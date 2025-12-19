@@ -1,0 +1,39 @@
+﻿@model IEnumerable<DMS.Models.Course>
+
+@{
+    ViewData["Title"] = "Danh sách môn học";
+}
+
+<div class="container mt-4">
+    <h1 class="text-primary">Quản lý môn học</h1>
+    <hr />
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã môn</th>
+                <th>Tên môn học</th>
+                <th>Mô tả</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.CourseCode</td>
+                        <td>@item.CourseName</td>
+                        <td>@item.Description</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="3" class="text-center">Không có dữ liệu môn học.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
