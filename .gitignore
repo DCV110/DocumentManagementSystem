@@ -1,58 +1,52 @@
 ########################################
-# Build results
+# 1. Visual Studio & Build Results
 ########################################
-bin/
-obj/
-
-########################################
-# Visual Studio
-########################################
+[Bb]in/
+[Oo]bj/
 .vs/
+.idea/
+.vscode/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
+*.dbmdl
+*.jfm
 
 ########################################
-# Rider / VS Code
+# 2. ASP.NET Core & Sensitive Data
 ########################################
-.idea/
-.vscode/
-
-########################################
-# ASP.NET Core
-########################################
-appsettings.Development.json
+# Chặn các file chứa mật khẩu/API Key cá nhân
 appsettings.Local.json
-appsettings.Production.json
+secrets.json
+# Giữ lại appsettings.json và appsettings.Development.json trên Git để làm mẫu
 
 ########################################
-# Logs
+# 3. DMS Project Specific (Quản lý tài liệu)
+########################################
+# CHẶN toàn bộ tài liệu thực tế được upload khi test
+wwwroot/uploads/*
+# Giữ lại folder uploads bằng file .gitkeep
+!wwwroot/uploads/.gitkeep
+
+########################################
+# 4. Database (Local)
+########################################
+# Không đẩy file DB local của mỗi máy lên Repo
+*.mdf
+*.ldf
+*.sdf
+
+########################################
+# 5. OS & Logs
 ########################################
 *.log
-
-########################################
-# OS generated files
-########################################
 .DS_Store
 Thumbs.db
 
 ########################################
-# NuGet
+# 6. NuGet & Packages
 ########################################
 packages/
 *.nupkg
-project.lock.json
-project.fragment.lock.json
-
-########################################
-# Publish output
-########################################
-publish/
-
-########################################
-# User-specific files
-########################################
-*.dbmdl
-*.jfm
-*.rsuser
+node_modules/
