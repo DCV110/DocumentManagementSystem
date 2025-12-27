@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "Sao lưu dữ liệu";
+    Layout = "_SidebarLayout";
+}
+
+<partial name="_AdminSidebar" />
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Sao lưu dữ liệu</h1>
+            <p>Backup database và files định kỳ</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <div class="upload-container">
+            <div class="form-section">
+                <h3 style="margin-bottom: 16px;">Thực hiện sao lưu</h3>
+                <p style="color: #6b7280; margin-bottom: 24px;">Sao lưu toàn bộ dữ liệu database và files tài liệu</p>
+                
+                <form method="post" action="@Url.Action("PerformBackup", "Admin")">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                        <span class="material-symbols-outlined">backup</span>
+                        Thực hiện sao lưu ngay
+                    </button>
+                </form>
+
+                @if (TempData["Message"] != null)
+                {
+                    <div style="margin-top: 16px; padding: 12px; background: #dcfce7; color: #16a34a; border-radius: 8px;">
+                        @TempData["Message"]
+                    </div>
+                }
+            </div>
+
+            <div class="form-section" style="margin-top: 32px;">
+                <h3 style="margin-bottom: 16px;">Lịch sử sao lưu</h3>
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af;">history</span>
+                    <p>Chưa có bản sao lưu nào</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

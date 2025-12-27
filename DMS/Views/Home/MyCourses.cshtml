@@ -1,0 +1,157 @@
+@{
+    ViewData["Title"] = "Khóa học của tôi";
+    Layout = "_DashboardLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<div class="dashboard-header">
+    <div class="header-left">
+        <div class="logo-icon">
+            <span class="material-symbols-outlined icon-fill">school</span>
+        </div>
+        <h2 class="header-title">Hệ thống Học tập</h2>
+    </div>
+    <div class="header-nav">
+        <a href="@Url.Action("StudentDashboard", "Home")" class="nav-link">Tổng quan</a>
+        <a href="@Url.Action("Library", "Document")" class="nav-link">Thư viện tài liệu</a>
+        <a href="@Url.Action("Search", "Document")" class="nav-link">Tìm kiếm</a>
+        <a href="@Url.Action("MyCourses", "Home")" class="nav-link active">Khóa học của tôi</a>
+        <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
+    </div>
+    <div class="header-actions">
+        <button class="notification-btn">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notification-badge"></span>
+        </button>
+        <div class="user-menu">
+            <button class="avatar-btn" id="avatarBtn" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></button>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-header">
+                    <div class="dropdown-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></div>
+                    <div class="dropdown-user-info">
+                        <div class="dropdown-name">@UserManager.GetUserName(User)</div>
+                        <div class="dropdown-role">Sinh viên</div>
+                    </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="dropdown-item logout-item">
+                        <span class="material-symbols-outlined">logout</span>
+                        <span>Đăng xuất</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main class="dashboard-main">
+    <div class="dashboard-title-section">
+        <div>
+            <h1 class="dashboard-title">Khóa học của tôi</h1>
+            <p class="dashboard-subtitle">Xem tất cả các khóa học bạn đang tham gia</p>
+        </div>
+    </div>
+
+    <!-- Courses Grid -->
+    <div class="courses-section">
+        @if (ViewBag.Courses != null)
+        {
+            var courses = ViewBag.Courses as List<DMS.Models.Course>;
+            @if (courses != null && courses.Any())
+            {
+                <div class="courses-grid">
+                    @foreach (var course in courses)
+                    {
+                        @if (course != null)
+                        {
+                            var documentCount = course.Documents?.Count ?? 0;
+                            var progress = new Random().Next(30, 100); // Tạm thời random, sau này sẽ tính từ dữ liệu thực
+                            
+                            <div class="course-card">
+                                <div class="course-header">
+                                    <div class="course-info">
+                                        <div class="course-icon blue">
+                                            <span class="material-symbols-outlined">book</span>
+                                        </div>
+                                        <div class="course-details">
+                                            <h4>@course.CourseName</h4>
+                                            <p>@course.CourseCode</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(course.Description))
+                                {
+                                    <p style="font-size: 14px; color: #6b7280; margin: 12px 0;">@course.Description</p>
+                                }
+                                <div class="progress-bar">
+                                    <div class="progress-fill blue" style="width: @progress%"></div>
+                                </div>
+                                <div class="course-footer">
+                                    <span>Hoàn thành @progress%</span>
+                                    <span>@documentCount tài liệu</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">school</span>
+                <h3>Chưa có khóa học nào</h3>
+                <p>Bạn chưa được đăng ký vào khóa học nào. Vui lòng liên hệ quản trị viên.</p>
+            </div>
+        }
+    </div>
+</main>
+
+<script>
+    // User dropdown toggle
+    const avatarBtn = document.getElementById('avatarBtn');
+    const userDropdown = document.getElementById('userDropdown');
+
+    if (avatarBtn && userDropdown) {
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userDropdown.contains(e.target) && !avatarBtn.contains(e.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+    }
+</script>
+
+<style>
+.empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 16px 0 8px 0;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+</style>
+

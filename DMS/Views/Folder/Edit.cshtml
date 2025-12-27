@@ -1,0 +1,83 @@
+@{
+    ViewData["Title"] = "Sửa thư mục";
+    Layout = "_SidebarLayout";
+}
+
+@model DMS.Models.Folder
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isAdmin)
+{
+    <partial name="_AdminSidebar" />
+}
+else
+{
+    <partial name="_InstructorSidebar" />
+}
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Sửa thư mục</h1>
+            <p>Cập nhật thông tin thư mục</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <form asp-action="Edit" method="post" class="upload-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CreatedDate" />
+
+            <div class="upload-container">
+                <div class="form-section">
+                    <div class="form-group">
+                        <label asp-for="FolderName" class="form-label">Tên thư mục <span class="required">*</span></label>
+                        <input asp-for="FolderName" class="form-input" placeholder="Nhập tên thư mục" />
+                        <span asp-validation-for="FolderName" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="CourseId" class="form-label">Môn học <span class="required">*</span></label>
+                        <select asp-for="CourseId" class="form-select" asp-items="@(new SelectList(ViewBag.Courses, "Id", "CourseName"))">
+                            <option value="">-- Chọn môn học --</option>
+                        </select>
+                        <span asp-validation-for="CourseId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="@Url.Action("Index", "Folder")" class="btn-secondary" style="text-decoration: none;">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                        Hủy
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        <span class="material-symbols-outlined">save</span>
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
