@@ -1,0 +1,543 @@
+@{
+    ViewData["Title"] = "Tìm kiếm nâng cao";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isStudent = false;
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isStudent = roles.Contains("Student");
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isStudent)
+{
+    Layout = "_DashboardLayout";
+}
+else
+{
+    Layout = "_SidebarLayout";
+}
+
+@if (!isStudent)
+{
+    @if (isAdmin)
+    {
+        <partial name="_AdminSidebar" />
+    }
+    else
+    {
+        <partial name="_InstructorSidebar" />
+    }
+    <div class="main-content">
+        <!-- Header -->
+        <div class="content-header">
+            <div class="header-title-section">
+                <h1>Tìm kiếm nâng cao</h1>
+                <p>Tìm kiếm tài liệu theo nhiều tiêu chí</p>
+            </div>
+            <div class="header-actions">
+                <button class="notification-icon">
+                    <span class="material-symbols-outlined">notifications</span>
+                    <span class="notification-dot"></span>
+                </button>
+            </div>
+        </div>
+        <!-- Content Body -->
+        <div class="content-body">
+            <!-- Search Form -->
+            <div class="search-advanced-container">
+                <form method="get" action="@Url.Action("Search", "Document")" class="search-advanced-form">
+                    <div class="search-main-box">
+                        <span class="material-symbols-outlined search-icon-large">search</span>
+                        <input type="text" name="q" class="search-input-large" placeholder="Tìm kiếm theo tên, nội dung..." value="@ViewBag.Query" />
+                        <button type="submit" class="search-submit-btn">
+                            <span class="material-symbols-outlined">search</span>
+                            Tìm kiếm
+                        </button>
+                    </div>
+
+                    <div class="search-filters">
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label>Tác giả</label>
+                                <input type="text" name="author" class="form-input" placeholder="Tên tác giả..." value="@ViewBag.Author" />
+                            </div>
+                            <div class="filter-item">
+                                <label>Loại file</label>
+                                <select name="fileType" class="form-select">
+                                    <option value="">Tất cả</option>
+                                    <option value="pdf" selected="@(ViewBag.FileType == "pdf")">PDF</option>
+                                    <option value="word" selected="@(ViewBag.FileType == "word")">Word</option>
+                                    <option value="excel" selected="@(ViewBag.FileType == "excel")">Excel</option>
+                                    <option value="powerpoint" selected="@(ViewBag.FileType == "powerpoint")">PowerPoint</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <div class="filter-item">
+                                <label>Từ ngày</label>
+                                <input type="date" name="fromDate" class="form-input" value="@(ViewBag.FromDate?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="filter-item">
+                                <label>Đến ngày</label>
+                                <input type="date" name="toDate" class="form-input" value="@(ViewBag.ToDate?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Results -->
+                @if (ViewBag.Results != null)
+                {
+                    <div class="search-results-header">
+                        <h3>Tìm thấy @(ViewBag.TotalResults ?? 0) kết quả</h3>
+                    </div>
+
+                    <div class="search-results">
+                        @{
+                            var results1 = ViewBag.Results as List<DMS.Models.Document>;
+                        }
+                        @if (results1 != null)
+                        {
+                            @foreach (var doc in results1)
+                            {
+                                @if (doc != null)
+                                {
+                                    <div class="search-result-item">
+                                        <div class="result-icon">
+                                            @if (doc.ContentType.Contains("pdf"))
+                                            {
+                                                <span class="material-symbols-outlined" style="color: #dc2626;">picture_as_pdf</span>
+                                            }
+                                            else if (doc.ContentType.Contains("word"))
+                                            {
+                                                <span class="material-symbols-outlined" style="color: #2563eb;">description</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="material-symbols-outlined" style="color: #6b7280;">insert_drive_file</span>
+                                            }
+                                        </div>
+                                        <div class="result-content">
+                                            <h4><a href="@Url.Action("Preview", "Document", new { id = doc.Id })">@doc.Title</a></h4>
+                                            <p class="result-meta">
+                                                <span>@doc.User?.FullName</span>
+                                                <span>•</span>
+                                                <span>@doc.Course?.CourseName</span>
+                                                <span>•</span>
+                                                <span>@doc.UploadDate.ToString("dd/MM/yyyy")</span>
+                                            </p>
+                                            <p class="result-description">@(doc.Description ?? "Không có mô tả")</p>
+                                        </div>
+                                        <div class="result-actions">
+                                            <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem">
+                                                <span class="material-symbols-outlined">visibility</span>
+                                            </a>
+                                            <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn" title="Tải xuống">
+                                                <span class="material-symbols-outlined">download</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-search">
+                        <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">search_off</span>
+                        <h3>Nhập từ khóa để tìm kiếm</h3>
+                        <p>Sử dụng các bộ lọc để tìm chính xác hơn</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-header">
+        <div class="header-left">
+            <div class="logo-icon">
+                <span class="material-symbols-outlined icon-fill">school</span>
+            </div>
+            <h2 class="header-title">Hệ thống Học tập</h2>
+        </div>
+        <div class="header-nav">
+            <a href="@Url.Action("StudentDashboard", "Home")" class="nav-link">Tổng quan</a>
+            <a href="@Url.Action("Library", "Document")" class="nav-link">Thư viện tài liệu</a>
+            <a href="@Url.Action("Search", "Document")" class="nav-link active">Tìm kiếm</a>
+            <a href="@Url.Action("MyCourses", "Home")" class="nav-link">Khóa học của tôi</a>
+            <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
+        </div>
+        <div class="header-actions">
+            <button class="notification-btn">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-badge"></span>
+            </button>
+            <div class="user-menu">
+                <button class="avatar-btn" id="avatarBtn" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></button>
+                <div class="user-dropdown" id="userDropdown">
+                    <div class="dropdown-header">
+                        <div class="dropdown-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></div>
+                        <div class="dropdown-user-info">
+                            <div class="dropdown-name">@UserManager.GetUserName(User)</div>
+                            <div class="dropdown-role">Sinh viên</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="dropdown-item logout-item">
+                            <span class="material-symbols-outlined">logout</span>
+                            <span>Đăng xuất</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <main class="dashboard-main">
+        <div class="dashboard-title-section">
+            <div>
+                <h1 class="dashboard-title">Tìm kiếm nâng cao</h1>
+                <p class="dashboard-subtitle">Tìm kiếm tài liệu theo nhiều tiêu chí</p>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="search-advanced-container">
+            <form method="get" action="@Url.Action("Search", "Document")" class="search-advanced-form">
+                <div class="search-main-box">
+                    <span class="material-symbols-outlined search-icon-large">search</span>
+                    <input type="text" name="q" class="search-input-large" placeholder="Tìm kiếm theo tên, nội dung..." value="@ViewBag.Query" />
+                    <button type="submit" class="search-submit-btn">
+                        <span class="material-symbols-outlined">search</span>
+                        Tìm kiếm
+                    </button>
+                </div>
+
+                <div class="search-filters">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>Tác giả</label>
+                            <input type="text" name="author" class="form-input" placeholder="Tên tác giả..." value="@ViewBag.Author" />
+                        </div>
+                        <div class="filter-item">
+                            <label>Loại file</label>
+                            <select name="fileType" class="form-select">
+                                <option value="">Tất cả</option>
+                                <option value="pdf" selected="@(ViewBag.FileType == "pdf")">PDF</option>
+                                <option value="word" selected="@(ViewBag.FileType == "word")">Word</option>
+                                <option value="excel" selected="@(ViewBag.FileType == "excel")">Excel</option>
+                                <option value="powerpoint" selected="@(ViewBag.FileType == "powerpoint")">PowerPoint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>Từ ngày</label>
+                            <input type="date" name="fromDate" class="form-input" value="@(ViewBag.FromDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="filter-item">
+                            <label>Đến ngày</label>
+                            <input type="date" name="toDate" class="form-input" value="@(ViewBag.ToDate?.ToString("yyyy-MM-dd"))" />
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Results -->
+            @if (ViewBag.Results != null)
+            {
+                <div class="search-results-header">
+                    <h3>Tìm thấy @(ViewBag.TotalResults ?? 0) kết quả</h3>
+                </div>
+
+                <div class="search-results">
+                    @{
+                        var results = ViewBag.Results as List<DMS.Models.Document>;
+                    }
+                    @if (results != null)
+                    {
+                        @foreach (var doc in results)
+                        {
+                            @if (doc != null)
+                            {
+                                <div class="search-result-item">
+                                    <div class="result-icon">
+                                        @if (doc.ContentType.Contains("pdf"))
+                                        {
+                                            <span class="material-symbols-outlined" style="color: #dc2626;">picture_as_pdf</span>
+                                        }
+                                        else if (doc.ContentType.Contains("word"))
+                                        {
+                                            <span class="material-symbols-outlined" style="color: #2563eb;">description</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="material-symbols-outlined" style="color: #6b7280;">insert_drive_file</span>
+                                        }
+                                    </div>
+                                    <div class="result-content">
+                                        <h4><a href="@Url.Action("Preview", "Document", new { id = doc.Id })">@doc.Title</a></h4>
+                                        <p class="result-meta">
+                                            <span>@doc.User?.FullName</span>
+                                            <span>•</span>
+                                            <span>@doc.Course?.CourseName</span>
+                                            <span>•</span>
+                                            <span>@doc.UploadDate.ToString("dd/MM/yyyy")</span>
+                                        </p>
+                                        <p class="result-description">@(doc.Description ?? "Không có mô tả")</p>
+                                    </div>
+                                    <div class="result-actions">
+                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </a>
+                                        <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn" title="Tải xuống">
+                                            <span class="material-symbols-outlined">download</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-search">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">search_off</span>
+                    <h3>Nhập từ khóa để tìm kiếm</h3>
+                    <p>Sử dụng các bộ lọc để tìm chính xác hơn</p>
+                </div>
+            }
+        </div>
+    </main>
+    
+    <script>
+        // User dropdown toggle
+        const avatarBtn = document.getElementById('avatarBtn');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (avatarBtn && userDropdown) {
+            avatarBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userDropdown.contains(e.target) && !avatarBtn.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+        }
+    </script>
+}
+
+<style>
+.search-advanced-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.search-advanced-form {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+
+.search-main-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.search-icon-large {
+    font-size: 24px;
+    color: #6b7280;
+}
+
+.search-input-large {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 16px;
+    color: #111418;
+    outline: none;
+}
+
+.search-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-submit-btn:hover {
+    background: #15803d;
+}
+
+.search-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.filter-item label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #111418;
+    margin-bottom: 8px;
+}
+
+.search-results-header {
+    margin-bottom: 16px;
+}
+
+.search-results-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0;
+}
+
+.search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.search-result-item {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all 0.2s;
+}
+
+.search-result-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.result-icon {
+    font-size: 40px;
+    flex-shrink: 0;
+}
+
+.result-content {
+    flex: 1;
+}
+
+.result-content h4 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.result-content h4 a {
+    color: #111418;
+    text-decoration: none;
+}
+
+.result-content h4 a:hover {
+    color: #16a34a;
+}
+
+.result-meta {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 8px 0;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.result-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.result-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #6b7280;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #e5e7eb;
+    color: #111418;
+}
+
+.empty-search {
+    text-align: center;
+    padding: 64px 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.empty-search h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 16px 0 8px 0;
+}
+
+.empty-search p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+</style>

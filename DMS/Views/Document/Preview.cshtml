@@ -1,0 +1,288 @@
+@{
+    var document = ViewBag.Document as DMS.Models.Document;
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Xem tài liệu";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    var isStudent = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+        isStudent = roles.Contains("Student");
+    }
+    
+    if (isStudent)
+    {
+        Layout = "_DashboardLayout";
+    }
+    else
+    {
+        Layout = "_SidebarLayout";
+    }
+}
+
+@if (!isStudent)
+{
+    @if (isAdmin)
+    {
+        <partial name="_AdminSidebar" />
+    }
+    else
+    {
+        <partial name="_InstructorSidebar" />
+    }
+}
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>@document?.Title</h1>
+            <p>@document?.Course?.CourseName • @document?.UploadDate.ToString("dd/MM/yyyy")</p>
+        </div>
+        <div class="header-actions">
+            <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none;">
+                <span class="material-symbols-outlined">download</span>
+                Tải xuống
+            </a>
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <div class="preview-container">
+            @if (document?.ContentType.Contains("pdf") == true)
+            {
+                <iframe src="@document.FilePath" class="preview-iframe" frameborder="0"></iframe>
+            }
+            else if (document?.ContentType.Contains("image") == true)
+            {
+                <img src="@document.FilePath" alt="@document.Title" class="preview-image" />
+            }
+            else
+            {
+                <div class="preview-unsupported">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">description</span>
+                    <h3>Không thể xem trực tuyến</h3>
+                    <p>File này không hỗ trợ xem trực tuyến. Vui lòng tải xuống để xem.</p>
+                    <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;">
+                        <span class="material-symbols-outlined">download</span>
+                        Tải xuống
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Document Info Sidebar -->
+        <div class="preview-sidebar">
+            <div class="info-card">
+                <h3>Thông tin tài liệu</h3>
+                <div class="info-item">
+                    <span class="info-label">Tác giả:</span>
+                    <span class="info-value">@document?.User?.FullName</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Môn học:</span>
+                    <span class="info-value">@document?.Course?.CourseName</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Ngày đăng:</span>
+                    <span class="info-value">@document?.UploadDate.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Kích thước:</span>
+                    <span class="info-value">@(document != null ? FormatFileSize(document.FileSize) : "")</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Định dạng:</span>
+                    <span class="info-value">@document?.ContentType</span>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(document?.Description))
+            {
+                <div class="info-card">
+                    <h3>Mô tả</h3>
+                    <p>@document.Description</p>
+                </div>
+            }
+
+            <div class="info-card">
+                <h3>Hành động</h3>
+                <div class="action-buttons-vertical">
+                    <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="action-btn-full">
+                        <span class="material-symbols-outlined">download</span>
+                        Tải xuống
+                    </a>
+                    <button class="action-btn-full">
+                        <span class="material-symbols-outlined">favorite_border</span>
+                        Đánh dấu yêu thích
+                    </button>
+                    <button class="action-btn-full">
+                        <span class="material-symbols-outlined">share</span>
+                        Chia sẻ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "Bytes", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
+
+<style>
+.preview-container {
+    flex: 1;
+    background: #f9fafb;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-iframe {
+    width: 100%;
+    height: 800px;
+    border: none;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 800px;
+    object-fit: contain;
+}
+
+.preview-unsupported {
+    text-align: center;
+    padding: 64px 24px;
+}
+
+.preview-unsupported h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 16px 0 8px 0;
+}
+
+.preview-unsupported p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.content-body {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.preview-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.info-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0 0 16px 0;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #111418;
+    font-weight: 600;
+}
+
+.action-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-btn-full {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    color: #111418;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    width: 100%;
+    justify-content: center;
+}
+
+.action-btn-full:hover {
+    background: #e5e7eb;
+}
+
+@@media (max-width: 1024px) {
+    .content-body {
+        flex-direction: column;
+    }
+
+    .preview-sidebar {
+        width: 100%;
+    }
+}
+</style>
+
