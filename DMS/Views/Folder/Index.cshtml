@@ -1,0 +1,227 @@
+@{
+    ViewData["Title"] = "Quản lý thư mục";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isAdmin)
+{
+    <partial name="_AdminSidebar" />
+}
+else
+{
+    <partial name="_InstructorSidebar" />
+}
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Quản lý thư mục</h1>
+            <p>Tổ chức tài liệu theo cấu trúc thư mục</p>
+        </div>
+        <div class="header-actions">
+            <a href="@Url.Action("Create", "Folder")" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined">add</span>
+                Tạo thư mục mới
+            </a>
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <div class="folder-management-container">
+            <!-- Folder Tree -->
+            <div class="folder-tree-panel">
+                <h3>Danh sách thư mục</h3>
+                <div class="folder-tree">
+                    @if (ViewBag.Folders != null)
+                    {
+                        var folders = ViewBag.Folders as List<DMS.Models.Folder>;
+                        @if (folders != null && folders.Any())
+                        {
+                            @foreach (var folder in folders)
+                            {
+                                <div class="folder-tree-item">
+                                <div class="folder-item-content">
+                                    <span class="material-symbols-outlined folder-icon">folder</span>
+                                    <span class="folder-name">@folder.FolderName</span>
+                                    <span class="folder-badge">@(folder.Documents?.Count ?? 0)</span>
+                                </div>
+                                <div class="folder-item-actions">
+                                    <a href="@Url.Action("Edit", "Folder", new { id = folder.Id })" class="folder-action-btn" title="Sửa">
+                                        <span class="material-symbols-outlined">edit</span>
+                                    </a>
+                                    <a href="@Url.Action("Permissions", "Folder", new { id = folder.Id })" class="folder-action-btn" title="Phân quyền">
+                                        <span class="material-symbols-outlined">lock</span>
+                                    </a>
+                                    <form method="post" action="@Url.Action("Delete", "Folder")" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa thư mục này?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@folder.Id" />
+                                        <button type="submit" class="folder-action-btn" title="Xóa">
+                                            <span class="material-symbols-outlined">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af;">folder_off</span>
+                            <p>Chưa có thư mục nào</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Folder Details -->
+            <div class="folder-details-panel">
+                <div class="folder-info-card">
+                    <h3>Thông tin thư mục</h3>
+                    <p style="color: #6b7280;">Chọn một thư mục để xem chi tiết</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.folder-management-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.folder-tree-panel,
+.folder-details-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.folder-tree-panel h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0 0 16px 0;
+}
+
+.folder-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.folder-tree-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.folder-tree-item:hover {
+    background: #f9fafb;
+    border-color: #16a34a;
+}
+
+.folder-item-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.folder-icon {
+    font-size: 24px;
+    color: #fbbf24;
+}
+
+.folder-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #111418;
+}
+
+.folder-badge {
+    background: #e5e7eb;
+    color: #6b7280;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.folder-item-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.folder-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent;
+    color: #6b7280;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.folder-action-btn:hover {
+    background: #f3f4f6;
+    color: #111418;
+}
+
+.folder-info-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0 0 8px 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 8px 0 0 0;
+}
+
+@@media (max-width: 1024px) {
+    .folder-management-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
