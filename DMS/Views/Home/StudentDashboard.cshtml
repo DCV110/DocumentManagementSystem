@@ -1,0 +1,424 @@
+@{
+    ViewData["Title"] = "Dashboard Sinh viên";
+    Layout = "_DashboardLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<div class="dashboard-header">
+    <div class="header-left">
+        <div class="logo-icon">
+            <span class="material-symbols-outlined icon-fill">school</span>
+        </div>
+        <h2 class="header-title">Hệ thống Học tập</h2>
+    </div>
+    <div class="header-nav">
+        <a href="@Url.Action("StudentDashboard", "Home")" class="nav-link active">Tổng quan</a>
+        <a href="@Url.Action("Library", "Document")" class="nav-link">Thư viện tài liệu</a>
+        <a href="@Url.Action("Search", "Document")" class="nav-link">Tìm kiếm</a>
+        <a href="@Url.Action("MyCourses", "Home")" class="nav-link">Khóa học của tôi</a>
+        <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
+    </div>
+    <div class="header-actions">
+        <button class="notification-btn">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notification-badge"></span>
+        </button>
+        <div class="user-menu">
+            <button class="avatar-btn" id="avatarBtn" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></button>
+            <div class="user-dropdown" id="userDropdown">
+                <div class="dropdown-header">
+                    <div class="dropdown-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></div>
+                    <div class="dropdown-user-info">
+                        <div class="dropdown-name">@UserManager.GetUserName(User)</div>
+                        <div class="dropdown-role">Sinh viên</div>
+                    </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="dropdown-item logout-item">
+                        <span class="material-symbols-outlined">logout</span>
+                        <span>Đăng xuất</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main class="dashboard-main">
+    <div class="dashboard-title-section">
+        <div>
+            <h1 class="dashboard-title">Dashboard Sinh viên</h1>
+            <p class="dashboard-subtitle">Chào mừng trở lại! Xem tiến độ học tập và tài liệu mới nhất của bạn.</p>
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-outline">Xem Lịch</button>
+            <button class="btn btn-primary">Nộp Bài Tập</button>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card orange-border">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Bài tập cần nộp</p>
+                <span class="material-symbols-outlined kpi-icon orange icon-fill">assignment_late</span>
+            </div>
+            <p class="kpi-value">3</p>
+            <p class="kpi-description">Sắp hết hạn trong 3 ngày tới</p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Thông báo mới</p>
+                <span class="material-symbols-outlined kpi-icon blue icon-fill">notifications_active</span>
+            </div>
+            <p class="kpi-value">5</p>
+            <p class="kpi-description">Từ giảng viên & hệ thống</p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Tín chỉ tích lũy</p>
+                <span class="material-symbols-outlined kpi-icon green">check_circle</span>
+            </div>
+            <p class="kpi-value">85</p>
+            <p class="kpi-description">Tiến độ: 70% chương trình</p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Điểm trung bình (GPA)</p>
+                <span class="material-symbols-outlined kpi-icon">school</span>
+            </div>
+            <p class="kpi-value">3.62</p>
+            <p class="kpi-description">Học kỳ hiện tại</p>
+        </div>
+    </div>
+
+    <!-- Courses Section -->
+    <div class="courses-section">
+        <h3 class="section-title">Khóa học của tôi</h3>
+        <div class="courses-grid">
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon blue">
+                            <span class="material-symbols-outlined">code</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Cấu trúc dữ liệu</h4>
+                            <p>CS101 - TS. Nguyễn Văn A</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill blue" style="width: 75%"></div>
+                </div>
+                <div class="course-footer">
+                    <span>Hoàn thành 75%</span>
+                    <span>Truy cập nhanh →</span>
+                </div>
+            </div>
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon purple">
+                            <span class="material-symbols-outlined">language</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Tiếng Anh Chuyên Ngành</h4>
+                            <p>ENG202 - Ms. Sarah</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill purple" style="width: 45%"></div>
+                </div>
+                <div class="course-footer">
+                    <span>Hoàn thành 45%</span>
+                    <span>Truy cập nhanh →</span>
+                </div>
+            </div>
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon green">
+                            <span class="material-symbols-outlined">psychology</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Triết học Mác-Lênin</h4>
+                            <p>PHI101 - PGS. Trần Thị B</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill green" style="width: 90%"></div>
+                </div>
+                <div class="course-footer">
+                    <span>Hoàn thành 90%</span>
+                    <span>Truy cập nhanh →</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-section">
+        <div class="search-box">
+            <div class="search-input-wrapper">
+                <div class="search-icon">
+                    <span class="material-symbols-outlined">search</span>
+                </div>
+                <input type="text" class="search-input" placeholder="Tìm kiếm tài liệu, khóa học hoặc giảng viên..." />
+            </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-select">
+                <span class="material-symbols-outlined filter-icon">filter_list</span>
+                <select>
+                    <option>Tất cả môn học</option>
+                    <option>CNTT & Truyền thông</option>
+                    <option>Ngoại ngữ</option>
+                    <option>Khoa học cơ bản</option>
+                </select>
+                <span class="material-symbols-outlined filter-arrow">expand_more</span>
+            </div>
+            <div class="filter-select">
+                <span class="material-symbols-outlined filter-icon">sort</span>
+                <select>
+                    <option>Mới nhất</option>
+                    <option>Đã xem gần đây</option>
+                    <option>Ưu tiên cao</option>
+                </select>
+                <span class="material-symbols-outlined filter-arrow">expand_more</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="documents-table-wrapper">
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th style="width: 48px; text-align: center;">
+                        <span class="material-symbols-outlined" style="font-size: 16px; color: #9ca3af;">star</span>
+                    </th>
+                    <th>Tài liệu</th>
+                    <th>Giảng viên</th>
+                    <th>Ngày đăng</th>
+                    <th>Trạng thái</th>
+                    <th class="text-right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align: center;">
+                        <span class="material-symbols-outlined icon-fill" style="color: #fb923c; font-size: 20px;">star</span>
+                    </td>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon orange">
+                                <span class="material-symbols-outlined">assignment</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Bài tập lớn: Phân tích AI</h5>
+                                <p>Môn: Trí tuệ nhân tạo</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="instructor-info">
+                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=TS.+Trần+Hùng&background=1e40af&color=fff')"></div>
+                            <div class="instructor-details">
+                                <h6>TS. Trần Hùng</h6>
+                                <span>Khoa CNTT</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color: #60758a; font-size: 14px;">24 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge orange">
+                            <span class="status-dot orange"></span>
+                            Sắp hết hạn
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <button class="action-btn" title="Xem chi tiết">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn download" title="Nộp bài">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">upload_file</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;">
+                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
+                    </td>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon blue">
+                                <span class="material-symbols-outlined">picture_as_pdf</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Slide bài giảng: Chương 3</h5>
+                                <p>Môn: Hóa đại cương</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="instructor-info">
+                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=ThS.+Lê+Thị+Lan&background=7c3aed&color=fff')"></div>
+                            <div class="instructor-details">
+                                <h6>ThS. Lê Thị Lan</h6>
+                                <span>Khoa Hóa</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color: #60758a; font-size: 14px;">23 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge blue">
+                            <span class="status-dot blue"></span>
+                            Tài liệu mới
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <button class="action-btn" title="Xem trước">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn download" title="Tải xuống">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;">
+                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
+                    </td>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon gray">
+                                <span class="material-symbols-outlined">article</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Đề cương: Quy hoạch Đô thị</h5>
+                                <p>Môn: Kiến trúc</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="instructor-info">
+                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=PGS.+Hoàng+Minh&background=16a34a&color=fff')"></div>
+                            <div class="instructor-details">
+                                <h6>PGS. Hoàng Minh</h6>
+                                <span>Khoa Kiến trúc</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color: #60758a; font-size: 14px;">22 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge gray">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
+                            Đã xem
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <button class="action-btn" title="Xem lại">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn download" title="Tải xuống">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="text-align: center;">
+                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
+                    </td>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon gray">
+                                <span class="material-symbols-outlined">description</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Dự án cuối kỳ: Năng lượng sạch</h5>
+                                <p>Môn: Khoa học Môi trường</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="instructor-info">
+                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=TS.+Phạm+Tuấn&background=ea580c&color=fff')"></div>
+                            <div class="instructor-details">
+                                <h6>TS. Phạm Tuấn</h6>
+                                <span>Khoa Môi trường</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color: #60758a; font-size: 14px;">21 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge gray">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
+                            Đã xem
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <button class="action-btn" title="Xem lại">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn download" title="Tải xuống">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="pagination-wrapper">
+            <div class="pagination-info">
+                Hiển thị <strong>1</strong> đến <strong>4</strong> trong số <strong>24</strong> tài liệu
+            </div>
+            <div class="pagination">
+                <button class="pagination-btn">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
+                </button>
+                <button class="pagination-btn active">1</button>
+                <button class="pagination-btn">2</button>
+                <button class="pagination-btn">3</button>
+                <button class="pagination-btn">...</button>
+                <button class="pagination-btn">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // User dropdown toggle
+    const avatarBtn = document.getElementById('avatarBtn');
+    const userDropdown = document.getElementById('userDropdown');
+
+    if (avatarBtn && userDropdown) {
+        avatarBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userDropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userDropdown.contains(e.target) && !avatarBtn.contains(e.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+    }
+</script>
+

@@ -1,0 +1,331 @@
+@{
+    ViewData["Title"] = "Dashboard Giảng viên";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<partial name="_InstructorSidebar" />
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Dashboard Giảng viên</h1>
+            <p>Chào mừng trở lại! Quản lý tài liệu và theo dõi hiệu quả giảng dạy của bạn.</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <!-- KPI Cards -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Tổng số tài liệu</p>
+                <span class="material-symbols-outlined kpi-icon blue icon-fill">description</span>
+            </div>
+            <p class="kpi-value">156</p>
+            <p class="kpi-description" style="color: #16a34a;">
+                <span style="color: #16a34a;">↑</span> +12 tháng này
+            </p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Tổng lượt xem</p>
+                <span class="material-symbols-outlined kpi-icon green">visibility</span>
+            </div>
+            <p class="kpi-value">1,204</p>
+            <p class="kpi-description" style="color: #16a34a;">
+                <span style="color: #16a34a;">↑</span> +8% so với tháng trước
+            </p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Lượt tải xuống</p>
+                <span class="material-symbols-outlined kpi-icon" style="color: #9333ea;">download</span>
+            </div>
+            <p class="kpi-value">892</p>
+            <p class="kpi-description">Tổng cộng các học kỳ</p>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <p class="kpi-label">Chờ phê duyệt</p>
+                <span class="material-symbols-outlined kpi-icon" style="color: #f97316;">hourglass_empty</span>
+            </div>
+            <p class="kpi-value">24</p>
+            <p class="kpi-description" style="color: #f97316;">Cần theo dõi</p>
+        </div>
+    </div>
+
+    <!-- Courses Section -->
+    <div class="courses-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 class="section-title">Khóa học đang giảng dạy</h3>
+            <a href="#" style="color: #0959aa; font-size: 14px; font-weight: 500; text-decoration: none;">Xem tất cả</a>
+        </div>
+        <div class="courses-grid">
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon blue">
+                            <span class="material-symbols-outlined">code</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Nhập môn Lập trình</h4>
+                            <p>CS101 • HK1 2023-2024</p>
+                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">45 Tài liệu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon green">
+                            <span class="material-symbols-outlined">account_tree</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Cấu trúc dữ liệu</h4>
+                            <p>CS201 • HK1 2023-2024</p>
+                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">38 Tài liệu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <div class="course-icon purple">
+                            <span class="material-symbols-outlined">psychology</span>
+                        </div>
+                        <div class="course-details">
+                            <h4>Trí tuệ nhân tạo</h4>
+                            <p>CS301 • HK1 2023-2024</p>
+                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">52 Tài liệu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-section">
+        <div class="search-box">
+            <div class="search-input-wrapper">
+                <div class="search-icon">
+                    <span class="material-symbols-outlined">search</span>
+                </div>
+                <input type="text" class="search-input" placeholder="Tìm kiếm tài liệu theo tên, mã môn học..." />
+            </div>
+        </div>
+        <div class="filter-group">
+            <div class="filter-select">
+                <span class="material-symbols-outlined filter-icon">filter_list</span>
+                <select>
+                    <option>Tất cả trạng thái</option>
+                    <option>Đã duyệt</option>
+                    <option>Chờ duyệt</option>
+                    <option>Yêu cầu chỉnh sửa</option>
+                </select>
+                <span class="material-symbols-outlined filter-arrow">expand_more</span>
+            </div>
+            <div class="filter-select">
+                <span class="material-symbols-outlined filter-icon">sort</span>
+                <select>
+                    <option>Mới nhất</option>
+                    <option>Cũ nhất</option>
+                    <option>Lượt xem nhiều nhất</option>
+                </select>
+                <span class="material-symbols-outlined filter-arrow">expand_more</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="documents-table-wrapper">
+        <div style="padding: 16px; border-bottom: 1px solid #dbe0e6;">
+            <h3 class="section-title" style="margin: 0;">Tài liệu gần đây</h3>
+        </div>
+        <table class="documents-table">
+            <thead>
+                <tr>
+                    <th>Tên tài liệu</th>
+                    <th>Khóa học</th>
+                    <th>Ngày đăng</th>
+                    <th>Trạng thái</th>
+                    <th class="text-right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon blue">
+                                <span class="material-symbols-outlined">slideshow</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Bài giảng Chương 5.pptx</h5>
+                                <p>PPTX • 2.4 MB</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>CS101</td>
+                    <td style="color: #60758a; font-size: 14px;">25 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">
+                            <span class="status-dot" style="background: #dc2626;"></span>
+                            Đang chờ duyệt
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">1,204 lượt xem</span>
+                            <button class="action-btn" title="Xem">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn" title="Chỉnh sửa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+                            </button>
+                            <button class="action-btn" title="Xóa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon blue">
+                                <span class="material-symbols-outlined">picture_as_pdf</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Tài liệu tham khảo.pdf</h5>
+                                <p>PDF • 1.8 MB</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>CS201</td>
+                    <td style="color: #60758a; font-size: 14px;">24 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                            Đã duyệt
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">856 lượt xem</span>
+                            <button class="action-btn" title="Xem">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn" title="Chỉnh sửa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+                            </button>
+                            <button class="action-btn" title="Xóa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon blue">
+                                <span class="material-symbols-outlined">description</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Đề thi giữa kỳ.docx</h5>
+                                <p>DOCX • 456 KB</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>CS301</td>
+                    <td style="color: #60758a; font-size: 14px;">23 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
+                            Yêu cầu chỉnh sửa
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">342 lượt xem</span>
+                            <button class="action-btn" title="Xem">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn" title="Chỉnh sửa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+                            </button>
+                            <button class="action-btn" title="Xóa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="document-info">
+                            <div class="document-icon blue">
+                                <span class="material-symbols-outlined">picture_as_pdf</span>
+                            </div>
+                            <div class="document-details">
+                                <h5>Hướng dẫn thực hành.pdf</h5>
+                                <p>PDF • 3.2 MB</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>CS101</td>
+                    <td style="color: #60758a; font-size: 14px;">22 Th10, 2023</td>
+                    <td>
+                        <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">
+                            <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                            Đã duyệt
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-group">
+                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">1,089 lượt xem</span>
+                            <button class="action-btn" title="Xem">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                            </button>
+                            <button class="action-btn" title="Chỉnh sửa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+                            </button>
+                            <button class="action-btn" title="Xóa">
+                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="pagination-wrapper">
+            <div class="pagination-info">
+                Hiển thị <strong>1</strong> đến <strong>4</strong> trong số <strong>156</strong> kết quả
+            </div>
+            <div class="pagination">
+                <button class="pagination-btn">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
+                </button>
+                <button class="pagination-btn active">1</button>
+                <button class="pagination-btn">2</button>
+                <button class="pagination-btn">3</button>
+                <button class="pagination-btn">...</button>
+                <button class="pagination-btn">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+

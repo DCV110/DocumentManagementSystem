@@ -22,14 +22,18 @@ namespace DMS.Data
                     await context.SaveChangesAsync();
                 }
 
-                // 2. Tạo Tài khoản Admin mẫu (Sử dụng Identity)
+                // 2. Tạo Roles và Users mẫu
                 var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-                // Tạo Role Admin nếu chưa có
-                if (!await roleManager.RoleExistsAsync("Admin"))
+                // Tạo các Roles
+                string[] roles = { "Admin", "Instructor", "Student" };
+                foreach (var roleName in roles)
                 {
-                    await roleManager.CreateAsync(new IdentityRole("Admin"));
+                    if (!await roleManager.RoleExistsAsync(roleName))
+                    {
+                        await roleManager.CreateAsync(new IdentityRole(roleName));
+                    }
                 }
 
                 // Tạo User Admin
@@ -44,10 +48,50 @@ namespace DMS.Data
                         EmailConfirmed = true
                     };
 
-                    var result = await userManager.CreateAsync(adminUser, "Admin@123"); // Mật khẩu mẫu
+                    var result = await userManager.CreateAsync(adminUser, "Admin@123");
                     if (result.Succeeded)
                     {
                         await userManager.AddToRoleAsync(adminUser, "Admin");
+                    }
+                }
+
+                // Tạo User Giảng viên
+                string instructorEmail = "instructor@dms.com";
+                if (await userManager.FindByEmailAsync(instructorEmail) == null)
+                {
+                    var instructorUser = new ApplicationUser
+                    {
+                        UserName = instructorEmail,
+                        Email = instructorEmail,
+                        FullName = "TS. Nguyễn Văn A",
+                        EmailConfirmed = true
+                    };
+
+                    var result = await userManager.CreateAsync(instructorUser, "Instructor@123");
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(instructorUser, "Instructor");
+                    }
+                }
+
+                // Tạo User Sinh viên
+                string studentEmail = "student@dms.com";
+                if (await userManager.FindByEmailAsync(studentEmail) == null)
+                {
+                    var studentUser = new ApplicationUser
+                    {
+                        UserName = studentEmail,
+                        Email = studentEmail,
+                        FullName = "Nguyễn Văn B",
+                        StudentCode = "SV001",
+                        Faculty = "Khoa CNTT",
+                        EmailConfirmed = true
+                    };
+
+                    var result = await userManager.CreateAsync(studentUser, "Student@123");
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(studentUser, "Student");
                     }
                 }
             }

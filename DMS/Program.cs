@@ -49,22 +49,32 @@ app.UseRouting();
 app.UseAuthentication(); // Phải nằm TRƯỚC UseAuthorization
 app.UseAuthorization();
 
+// Default route: vào trang login trước
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Course}/{action=Index}/{id?}");
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
+// 6. Tự động apply migrations và seed data
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        // Tự động apply migrations nếu chưa được apply
+        logger.LogInformation("Đang kiểm tra và áp dụng migrations...");
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Migrations đã được áp dụng thành công.");
+        
         // Gọi hàm Seed Data
         await SeedData.Initialize(services);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Một lỗi đã xảy ra khi nạp dữ liệu mẫu.");
+        logger.LogError(ex, "Một lỗi đã xảy ra khi khởi tạo database hoặc nạp dữ liệu mẫu.");
     }
 }
 

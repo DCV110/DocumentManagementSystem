@@ -1,0 +1,88 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+@{
+    ApplicationUser? user = null;
+    if (SignInManager.IsSignedIn(User))
+    {
+        user = await UserManager.GetUserAsync(User);
+    }
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<div class="sidebar">
+    <!-- Profile Section -->
+    <div class="sidebar-profile">
+        <div class="profile-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@(user?.FullName ?? "Admin")&background=16a34a&color=fff')"></div>
+        <div class="profile-info">
+            <h4>@(user?.FullName ?? "Hệ Thống Admin")</h4>
+            <p>@(user?.Faculty ?? "Khoa CNTT")</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        <a href="@Url.Action("AdminDashboard", "Home")" class="nav-item @(currentAction == "AdminDashboard" ? "active" : "")">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Dashboard</span>
+        </a>
+        <a href="@Url.Action("MyDocuments", "Home")" class="nav-item @(currentAction == "MyDocuments" ? "active" : "")">
+            <span class="material-symbols-outlined">folder</span>
+            <span>Tài liệu của tôi</span>
+        </a>
+        <a href="@Url.Action("Upload", "Document")" class="nav-item @(currentAction == "Upload" && currentController == "Document" ? "active" : "")">
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span>Tải lên tài liệu</span>
+        </a>
+        <a href="@Url.Action("Approval", "Document")" class="nav-item @(currentAction == "Approval" && currentController == "Document" ? "active" : "")">
+            <span class="material-symbols-outlined">assignment_turned_in</span>
+            <span>Phê duyệt</span>
+        </a>
+        <a href="@Url.Action("Index", "Folder")" class="nav-item @(currentController == "Folder" ? "active" : "")">
+            <span class="material-symbols-outlined">folder_managed</span>
+            <span>Quản lý thư mục</span>
+        </a>
+        <a href="@Url.Action("Search", "Document")" class="nav-item @(currentAction == "Search" && currentController == "Document" ? "active" : "")">
+            <span class="material-symbols-outlined">search</span>
+            <span>Tìm kiếm</span>
+        </a>
+        <a href="@Url.Action("UserManagement", "Admin")" class="nav-item @(currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">people</span>
+            <span>Quản lý người dùng</span>
+        </a>
+        <a href="@Url.Action("Reports", "Admin")" class="nav-item @(currentAction == "Reports" && currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">bar_chart</span>
+            <span>Báo cáo</span>
+        </a>
+        <a href="@Url.Action("AuditLog", "Admin")" class="nav-item @(currentAction == "AuditLog" && currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">history</span>
+            <span>Nhật ký</span>
+        </a>
+        <a href="@Url.Action("Backup", "Admin")" class="nav-item @(currentAction == "Backup" && currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">backup</span>
+            <span>Sao lưu</span>
+        </a>
+        <a href="#" class="nav-item">
+            <span class="material-symbols-outlined">settings</span>
+            <span>Cài đặt</span>
+        </a>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <button class="theme-toggle">
+            <span class="material-symbols-outlined">visibility</span>
+            <span>Toggle Theme</span>
+        </button>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span>Đăng xuất</span>
+            </button>
+        </form>
+    </div>
+</div>
+
