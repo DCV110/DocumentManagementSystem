@@ -100,26 +100,6 @@ namespace DMS.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("DMS.Models.Classroom", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AcademicYear")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ClassName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Classrooms");
-                });
-
             modelBuilder.Entity("DMS.Models.Course", b =>
                 {
                     b.Property<int>("Id")
@@ -128,8 +108,9 @@ namespace DMS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("ClassroomId")
-                        .HasColumnType("int");
+                    b.Property<string>("ClassCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("CourseCode")
                         .IsRequired()
@@ -144,9 +125,12 @@ namespace DMS.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("InstructorId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ClassroomId");
+                    b.HasIndex("InstructorId");
 
                     b.ToTable("Courses");
                 });
@@ -159,15 +143,30 @@ namespace DMS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApprovedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("CourseId")
+                    b.Property<int?>("CourseId")
                         .HasColumnType("int");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DownloadCount")
+                        .HasColumnType("int");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -183,6 +182,27 @@ namespace DMS.Migrations
                     b.Property<int?>("FolderId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublicShared")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("PublicShareApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("PublicShareRequested")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PublicShareToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -194,6 +214,9 @@ namespace DMS.Migrations
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -214,21 +237,72 @@ namespace DMS.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CourseId")
+                    b.Property<int?>("CourseId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FolderName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ParentFolderId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
 
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("DeletedBy");
+
+                    b.HasIndex("ParentFolderId");
+
                     b.ToTable("Folders");
+                });
+
+            modelBuilder.Entity("DMS.Models.StudentCourse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnrolledDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("StudentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("StudentCourses");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -366,18 +440,18 @@ namespace DMS.Migrations
 
             modelBuilder.Entity("DMS.Models.Course", b =>
                 {
-                    b.HasOne("DMS.Models.Classroom", null)
-                        .WithMany("Courses")
-                        .HasForeignKey("ClassroomId");
+                    b.HasOne("DMS.Models.ApplicationUser", "Instructor")
+                        .WithMany()
+                        .HasForeignKey("InstructorId");
+
+                    b.Navigation("Instructor");
                 });
 
             modelBuilder.Entity("DMS.Models.Document", b =>
                 {
                     b.HasOne("DMS.Models.Course", "Course")
                         .WithMany("Documents")
-                        .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CourseId");
 
                     b.HasOne("DMS.Models.Folder", "Folder")
                         .WithMany("Documents")
@@ -400,11 +474,46 @@ namespace DMS.Migrations
                 {
                     b.HasOne("DMS.Models.Course", "Course")
                         .WithMany()
+                        .HasForeignKey("CourseId");
+
+                    b.HasOne("DMS.Models.ApplicationUser", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy");
+
+                    b.HasOne("DMS.Models.ApplicationUser", "Deleter")
+                        .WithMany()
+                        .HasForeignKey("DeletedBy");
+
+                    b.HasOne("DMS.Models.Folder", "ParentFolder")
+                        .WithMany("SubFolders")
+                        .HasForeignKey("ParentFolderId");
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Deleter");
+
+                    b.Navigation("ParentFolder");
+                });
+
+            modelBuilder.Entity("DMS.Models.StudentCourse", b =>
+                {
+                    b.HasOne("DMS.Models.Course", "Course")
+                        .WithMany("StudentCourses")
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("DMS.Models.ApplicationUser", "Student")
+                        .WithMany("StudentCourses")
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Course");
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -461,21 +570,22 @@ namespace DMS.Migrations
             modelBuilder.Entity("DMS.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Documents");
-                });
 
-            modelBuilder.Entity("DMS.Models.Classroom", b =>
-                {
-                    b.Navigation("Courses");
+                    b.Navigation("StudentCourses");
                 });
 
             modelBuilder.Entity("DMS.Models.Course", b =>
                 {
                     b.Navigation("Documents");
+
+                    b.Navigation("StudentCourses");
                 });
 
             modelBuilder.Entity("DMS.Models.Folder", b =>
                 {
                     b.Navigation("Documents");
+
+                    b.Navigation("SubFolders");
                 });
 #pragma warning restore 612, 618
         }

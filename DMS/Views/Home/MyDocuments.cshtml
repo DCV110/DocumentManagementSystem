@@ -42,6 +42,19 @@ else
 
     <!-- Content Body -->
     <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" style="background: #dcfce7; color: #16a34a; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #86efac;">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger" style="background: #fef2f2; color: #dc2626; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #fca5a5;">
+                @TempData["ErrorMessage"]
+            </div>
+        }
         <!-- Summary Cards -->
         <div class="summary-cards">
             <!-- Total Views Card -->
@@ -49,7 +62,7 @@ else
                 <div class="summary-card-header">
                     <div>
                         <div class="summary-card-label">Tổng lượt xem</div>
-                        <div class="summary-card-value">1,240</div>
+                        <div class="summary-card-value">@(ViewBag.TotalViews ?? 0)</div>
                         <div class="summary-card-trend positive">
                             <span>↑</span>
                             <span>+12%</span>
@@ -67,7 +80,7 @@ else
                 <div class="summary-card-header">
                     <div>
                         <div class="summary-card-label">Tổng lượt tải</div>
-                        <div class="summary-card-value">850</div>
+                        <div class="summary-card-value">@(ViewBag.TotalDownloads ?? 0)</div>
                         <div class="summary-card-trend positive">
                             <span>↑</span>
                             <span>+5%</span>
@@ -80,45 +93,410 @@ else
                 <div class="summary-card-chart" style="background: linear-gradient(to top, #16a34a 0%, transparent 100%);"></div>
             </div>
 
-            <!-- Pending Documents Card -->
+            <!-- Total Documents Card -->
             <div class="summary-card">
                 <div class="summary-card-header">
                     <div>
-                        <div class="summary-card-label">Tài liệu đang chờ duyệt</div>
-                        <div class="summary-card-value">3</div>
-                        <div class="summary-card-trend neutral">
-                            <span>0%</span>
+                        <div class="summary-card-label">Tổng số tài liệu</div>
+                        <div class="summary-card-value">@(ViewBag.TotalDocuments ?? 0)</div>
+                        <div class="summary-card-trend positive">
+                            <span>↑</span>
+                            <span>+@(ViewBag.TotalFolders ?? 0) thư mục</span>
                         </div>
                     </div>
-                    <div class="summary-card-icon yellow">
-                        <span class="material-symbols-outlined">pending</span>
+                    <div class="summary-card-icon purple">
+                        <span class="material-symbols-outlined">description</span>
                     </div>
                 </div>
-                <button class="add-document-btn" style="background: #fbbf24; color: #78350f; margin-top: 16px; width: 100%;">
-                    Cần xử lý sớm
+                <div class="summary-card-chart" style="background: linear-gradient(to top, #9333ea 0%, transparent 100%);"></div>
+            </div>
+        </div>
+
+        <!-- Breadcrumb Navigation -->
+        @if (ViewBag.CurrentFolder != null)
+        {
+            <div class="breadcrumb-nav" style="margin-bottom: 16px; padding: 12px 16px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <a href="@Url.Action("MyDocuments", "Home")" style="display: flex; align-items: center; gap: 6px; color: #0959aa; text-decoration: none; font-size: 14px;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">home</span>
+                        <span>Tài liệu của tôi</span>
+                    </a>
+                    <span class="material-symbols-outlined" style="font-size: 18px; color: #6b7280;">chevron_right</span>
+                    <span style="color: #111418; font-size: 14px; font-weight: 500;">@(((DMS.Models.Folder)ViewBag.CurrentFolder).FolderName)</span>
+                </div>
+            </div>
+        }
+
+        <!-- Search and Filter Section -->
+        <div class="search-filter-section">
+            <form method="get" action="@Url.Action("MyDocuments", "Home")" id="searchForm" style="display: flex; gap: 12px; align-items: center; flex: 1;">
+                @if (ViewBag.CurrentFolderId != null)
+                {
+                    <input type="hidden" name="folderId" value="@ViewBag.CurrentFolderId" />
+                }
+                <div class="search-box-large" style="flex: 1;">
+                    <span class="material-symbols-outlined search-icon-large">search</span>
+                    <input type="text" name="search" class="search-input-large" placeholder="Tìm kiếm theo tên tài liệu hoặc thư mục..." value="@ViewBag.Search" />
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <select name="sortBy" class="sort-select" onchange="document.getElementById('searchForm').submit();" style="padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111418; background: white; cursor: pointer; min-width: 180px;">
+                        @{
+                            var currentSort = ViewBag.SortBy?.ToString() ?? "newest";
+                        }
+                        @if (currentSort == "newest" || ViewBag.SortBy == null)
+                        {
+                            <option value="newest" selected>Mới nhất</option>
+                        }
+                        else
+                        {
+                            <option value="newest">Mới nhất</option>
+                        }
+                        @if (currentSort == "oldest")
+                        {
+                            <option value="oldest" selected>Cũ nhất</option>
+                        }
+                        else
+                        {
+                            <option value="oldest">Cũ nhất</option>
+                        }
+                        @if (currentSort == "name_asc")
+                        {
+                            <option value="name_asc" selected>Tên A-Z</option>
+                        }
+                        else
+                        {
+                            <option value="name_asc">Tên A-Z</option>
+                        }
+                        @if (currentSort == "name_desc")
+                        {
+                            <option value="name_desc" selected>Tên Z-A</option>
+                        }
+                        else
+                        {
+                            <option value="name_desc">Tên Z-A</option>
+                        }
+                        @if (currentSort == "downloads")
+                        {
+                            <option value="downloads" selected>Lượt tải nhiều nhất</option>
+                        }
+                        else
+                        {
+                            <option value="downloads">Lượt tải nhiều nhất</option>
+                        }
+                        @if (currentSort == "size")
+                        {
+                            <option value="size" selected>Kích thước</option>
+                        }
+                        else
+                        {
+                            <option value="size">Kích thước</option>
+                        }
+                    </select>
+                    <button type="submit" class="search-btn" style="padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined">search</span>
+                        Tìm kiếm
+                    </button>
+                    @if (!string.IsNullOrEmpty(ViewBag.Search?.ToString()))
+                    {
+                        <a href="@Url.Action("MyDocuments", "Home")" class="clear-search-btn" style="padding: 10px 20px; background: #f3f4f6; color: #6b7280; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                            <span class="material-symbols-outlined">close</span>
+                            Xóa
+                        </a>
+                    }
+                </div>
+            </form>
+            <div style="display: flex; gap: 8px; margin-left: 12px;">
+                <button type="button" class="add-document-btn" id="openCreateFolderModal" onclick="openCreateFolderModalFunc()" style="text-decoration: none; border: none; cursor: pointer; background: #16a34a;">
+                    <span class="material-symbols-outlined">create_new_folder</span>
+                    <span>Tạo thư mục</span>
+                </button>
+                <button type="button" class="add-document-btn" id="openUploadModal" onclick="openUploadModalFunc()" style="text-decoration: none; border: none; cursor: pointer;">
+                    <span class="material-symbols-outlined">add</span>
+                    <span>Thêm tài liệu mới</span>
                 </button>
             </div>
         </div>
 
-        <!-- Search and Filter Section -->
-        <div class="search-filter-section">
-            <div class="search-box-large">
-                <span class="material-symbols-outlined search-icon-large">search</span>
-                <input type="text" class="search-input-large" placeholder="Tìm kiếm theo tên tài liệu..." />
+        <!-- Upload Modal -->
+        <div class="upload-modal" id="uploadModal" style="display: none;">
+            <div class="upload-modal-overlay" id="uploadModalOverlay"></div>
+            <div class="upload-modal-content">
+                <div class="upload-modal-header">
+                    <h2>Tải lên tài liệu</h2>
+                    <button type="button" class="upload-modal-close" id="closeUploadModal">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form asp-controller="Home" asp-action="MyDocuments" method="post" enctype="multipart/form-data" id="uploadForm">
+                    @Html.AntiForgeryToken()
+                    
+                    <!-- Upload Zone -->
+                    <div class="upload-zone-inline" id="uploadZoneInline">
+                        <div class="upload-zone-content-inline">
+                            <span class="material-symbols-outlined upload-icon-inline">cloud_upload</span>
+                            <p>Kéo thả file vào đây hoặc <label for="fileInputInline" style="color: #0959aa; cursor: pointer; text-decoration: underline;">chọn file</label></p>
+                            <input type="file" name="Files" id="fileInputInline" class="file-input-hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar" multiple />
+                            <p class="upload-hint-inline">Hỗ trợ: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, ZIP (tối đa 50MB mỗi file). Có thể chọn nhiều file cùng lúc. File ZIP sẽ được giải nén tự động.</p>
+                        </div>
+                    </div>
+
+                    <!-- Files List (shown after files selected) -->
+                    <div class="files-list-inline" id="filesListInline" style="display: none;">
+                        <div style="margin-bottom: 12px; font-weight: 600; color: #111418; font-size: 14px;">
+                            <span id="filesCountInline">0</span> file đã chọn
+                        </div>
+                        <div id="filesContainerInline" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                            <!-- Files will be added here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Form Fields -->
+                    <div class="upload-form-fields-inline" id="uploadFormFieldsInline" style="display: none;">
+                        <div class="form-group-inline">
+                            <label for="Description" class="form-label-inline">Mô tả chung (tùy chọn)</label>
+                            <textarea name="Description" id="descriptionInputInline" class="form-textarea-inline" rows="2" placeholder="Mô tả chung cho tất cả các file (tùy chọn)"></textarea>
+                            <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Mô tả này sẽ áp dụng cho tất cả các file đã chọn</small>
+                        </div>
+
+                        <div class="form-group-inline">
+                            <label for="FolderId" class="form-label-inline">Thư mục (tùy chọn)</label>
+                            <select name="FolderId" id="folderSelectInline" class="form-select-inline">
+                                <option value="">-- Không chọn (upload file lẻ) --</option>
+                                @if (ViewBag.AllFolders != null)
+                                {
+                                    @foreach (var folder in (List<DMS.Models.Folder>)ViewBag.AllFolders)
+                                    {
+                                        @if (ViewBag.CurrentFolderId != null && folder.Id == (int)ViewBag.CurrentFolderId)
+                                        {
+                                            <option value="@folder.Id" selected>@folder.FolderName (Thư mục hiện tại)</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@folder.Id">@folder.FolderName</option>
+                                        }
+                                    }
+                                }
+                            </select>
+                            <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">
+                                @if (ViewBag.CurrentFolderId != null)
+                                {
+                                    <text>File sẽ được lưu vào thư mục hiện tại. Bạn có thể chọn thư mục khác nếu muốn.</text>
+                                }
+                                else
+                                {
+                                    <text>Tất cả các file sẽ được lưu vào thư mục này</text>
+                                }
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="upload-actions-inline">
+                        <button type="button" class="btn-cancel-inline" id="cancelUploadBtn">Hủy</button>
+                        <button type="submit" class="btn-upload-inline" id="submitUploadBtn" disabled>
+                            <span class="material-symbols-outlined">cloud_upload</span>
+                            Tải lên
+                        </button>
+                    </div>
+                </form>
             </div>
-            <div class="filter-buttons">
-                <button class="filter-btn active">Tất cả</button>
-                <button class="filter-btn">Đã đăng</button>
-                <button class="filter-btn">Nháp</button>
-            </div>
-            <a href="@Url.Action("Upload", "Document")" class="add-document-btn" style="text-decoration: none;">
-                <span class="material-symbols-outlined">add</span>
-                <span>Thêm tài liệu mới</span>
-            </a>
         </div>
 
-        <!-- Documents Table -->
-        <div class="documents-table-container">
+        <!-- Folders and Documents Grid View (Google Drive style) -->
+        <div class="drive-grid-container">
+            <!-- Folders Section -->
+            @{
+                var foldersToDisplay = ViewBag.Folders != null 
+                    ? (List<DMS.Models.Folder>)ViewBag.Folders 
+                    : new List<DMS.Models.Folder>();
+                
+                // Exclude current folder if viewing a specific folder
+                if (ViewBag.CurrentFolderId != null)
+                {
+                    foldersToDisplay = foldersToDisplay.Where(f => f.Id != (int)ViewBag.CurrentFolderId).ToList();
+                }
+            }
+            @{
+                var hasFolders = foldersToDisplay != null && foldersToDisplay.Any();
+                var hasZipFiles = ViewBag.ZipFiles != null && ((List<DMS.Models.Document>)ViewBag.ZipFiles).Any();
+            }
+            @if (hasFolders || hasZipFiles)
+            {
+                <div class="drive-grid-section">
+                    <h3 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 12px; padding: 0 8px;">Thư mục</h3>
+                    <div class="drive-grid">
+                        @if (hasFolders && foldersToDisplay != null)
+                        {
+                            @foreach (var folder in foldersToDisplay)
+                            {
+                                <div class="drive-item folder-item" style="cursor: pointer;">
+                                    <div class="drive-item-icon folder-icon" onclick="navigateToFolder(@folder.Id)">
+                                        <span class="material-symbols-outlined">folder</span>
+                                    </div>
+                                    <div class="drive-item-name" title="@folder.FolderName" onclick="navigateToFolder(@folder.Id)">@folder.FolderName</div>
+                                    <div class="drive-item-meta" onclick="navigateToFolder(@folder.Id)">
+                                        @{
+                                            var folderItemCounts = ViewBag.FolderItemCounts as System.Collections.Generic.Dictionary<int, int>;
+                                            var itemCount = folderItemCounts != null && folderItemCounts.ContainsKey(folder.Id) 
+                                                ? folderItemCounts[folder.Id] 
+                                                : 0;
+                                        }
+                                        @itemCount mục
+                                    </div>
+                                    <div class="drive-item-menu">
+                                        <button type="button" class="drive-menu-btn" onclick="event.stopPropagation(); toggleFolderMenu(@folder.Id)">
+                                            <span class="material-symbols-outlined">more_vert</span>
+                                        </button>
+                                        <div class="drive-menu-dropdown" id="folderMenu@(folder.Id)" style="display: none;">
+                                            <a href="@Url.Action("MyDocuments", "Home", new { folderId = folder.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">visibility</span>
+                                                <span>Xem</span>
+                                            </a>
+                                            <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModalForFolder(@folder.Id, '@folder.FolderName.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                                <span class="material-symbols-outlined">share</span>
+                                                <span>Chia sẻ</span>
+                                            </button>
+                                            <a href="@Url.Action("Edit", "Folder", new { id = folder.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">edit</span>
+                                                <span>Sửa</span>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "Folder", new { id = folder.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa thư mục này?');" onclick="event.stopPropagation();">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@folder.Id" />
+                                                <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                    <span class="material-symbols-outlined">delete</span>
+                                                    <span>Xóa</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        @if (hasZipFiles)
+                        {
+                            @foreach (var zipDoc in (List<DMS.Models.Document>)ViewBag.ZipFiles)
+                            {
+                                <div class="drive-item folder-item" style="cursor: pointer;">
+                                    <div class="drive-item-icon folder-icon" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">
+                                        <span class="material-symbols-outlined">folder_zip</span>
+                                    </div>
+                                    <div class="drive-item-name" title="@zipDoc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">@zipDoc.Title</div>
+                                    <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">
+                                        @zipDoc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))
+                                    </div>
+                                    <div class="drive-item-menu">
+                                        <button type="button" class="drive-menu-btn" onclick="event.stopPropagation(); toggleDocumentMenu(@zipDoc.Id)">
+                                            <span class="material-symbols-outlined">more_vert</span>
+                                        </button>
+                                        <div class="drive-menu-dropdown" id="documentMenu@(zipDoc.Id)" style="display: none;">
+                                            <a href="@Url.Action("Preview", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">visibility</span>
+                                                <span>Xem</span>
+                                            </a>
+                                            <a href="@Url.Action("Download", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">download</span>
+                                                <span>Tải xuống</span>
+                                            </a>
+                                            <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@zipDoc.Id, '@zipDoc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                                <span class="material-symbols-outlined">share</span>
+                                                <span>Chia sẻ</span>
+                                            </button>
+                                            <a href="@Url.Action("Edit", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">edit</span>
+                                                <span>Sửa</span>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "Document", new { id = zipDoc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa file ZIP này?');" onclick="event.stopPropagation();">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@zipDoc.Id" />
+                                                <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                    <span class="material-symbols-outlined">delete</span>
+                                                    <span>Xóa</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Documents Section -->
+            @if (ViewBag.Documents != null && ((List<DMS.Models.Document>)ViewBag.Documents).Any())
+            {
+                <div class="drive-grid-section" style="margin-top: 32px;">
+                    <h3 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 12px; padding: 0 8px;">Tài liệu</h3>
+                    <div class="drive-grid">
+                        @foreach (var doc in (List<DMS.Models.Document>)ViewBag.Documents)
+                        {
+                            var fileExtension = doc.FileName?.Split('.').LastOrDefault()?.ToLower() ?? "";
+                            var fileIcon = "insert_drive_file";
+                            var iconColor = "blue";
+                            
+                            if (fileExtension == "pdf") { fileIcon = "picture_as_pdf"; iconColor = "red"; }
+                            else if (fileExtension == "doc" || fileExtension == "docx") { fileIcon = "description"; iconColor = "blue"; }
+                            else if (fileExtension == "ppt" || fileExtension == "pptx") { fileIcon = "slideshow"; iconColor = "purple"; }
+                            else if (fileExtension == "xls" || fileExtension == "xlsx") { fileIcon = "table_chart"; iconColor = "green"; }
+
+                            <div class="drive-item document-item">
+                                <div class="drive-item-icon document-icon @iconColor" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">
+                                    <span class="material-symbols-outlined">@fileIcon</span>
+                                </div>
+                                <div class="drive-item-name" title="@doc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">@doc.Title</div>
+                                <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</div>
+                                <div class="drive-item-menu">
+                                    <button type="button" class="drive-menu-btn" onclick="event.stopPropagation(); toggleDocumentMenu(@doc.Id)">
+                                        <span class="material-symbols-outlined">more_vert</span>
+                                    </button>
+                                    <div class="drive-menu-dropdown" id="documentMenu@(doc.Id)" style="display: none;">
+                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                            <span>Xem</span>
+                                        </a>
+                                        <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                            <span class="material-symbols-outlined">download</span>
+                                            <span>Tải xuống</span>
+                                        </a>
+                                        <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@doc.Id, '@doc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                            <span class="material-symbols-outlined">share</span>
+                                            <span>Chia sẻ</span>
+                                        </button>
+                                        <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                            <span class="material-symbols-outlined">edit</span>
+                                            <span>Sửa</span>
+                                        </a>
+                                        <form method="post" action="@Url.Action("Delete", "Document", new { id = doc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa tài liệu này?');" onclick="event.stopPropagation();">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@doc.Id" />
+                                            <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                <span class="material-symbols-outlined">delete</span>
+                                                <span>Xóa</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if ((ViewBag.Folders == null || !((List<DMS.Models.Folder>)ViewBag.Folders).Any()) && 
+                 (ViewBag.ZipFiles == null || !((List<DMS.Models.Document>)ViewBag.ZipFiles).Any()) &&
+                 (ViewBag.Documents == null || !((List<DMS.Models.Document>)ViewBag.Documents).Any()))
+            {
+                <div style="text-align: center; padding: 64px 24px; color: #6b7280;">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px; display: block;">folder_open</span>
+                    <p style="font-size: 16px; margin-bottom: 8px;">Chưa có thư mục hoặc tài liệu nào</p>
+                    <p style="font-size: 14px; color: #9ca3af;">Tạo thư mục hoặc tải lên tài liệu để bắt đầu</p>
+                </div>
+            }
+        </div>
+
+        <!-- Documents Table (Hidden by default, can be toggled) -->
+        <div class="documents-table-container" style="display: none;">
             <table class="documents-table-modern">
                 <thead>
                     <tr>
@@ -130,141 +508,108 @@ else
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>
-                            <div class="document-item">
-                                <div class="document-item-icon red">
-                                    <span class="material-symbols-outlined">picture_as_pdf</span>
-                                </div>
-                                <div class="document-item-info">
-                                    <h5>Bài giảng Nhập môn CS101</h5>
-                                    <p>Chương 1: Giới thiệu về Thuật toán</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: #6b7280;">24 Tháng 10, 2023</td>
-                        <td style="color: #111418; font-weight: 500;">142</td>
-                        <td>
-                            <span class="status-badge-modern green">
-                                <span class="status-dot-modern green"></span>
-                                Đã đăng
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-menu-btn" title="More options">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="document-item">
-                                <div class="document-item-icon blue">
-                                    <span class="material-symbols-outlined">description</span>
-                                </div>
-                                <div class="document-item-info">
-                                    <h5>Đề cương chi tiết Mạng máy tính</h5>
-                                    <p>Học kỳ 1 - 2023/2024</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: #6b7280;">22 Tháng 10, 2023</td>
-                        <td style="color: #111418; font-weight: 500;">89</td>
-                        <td>
-                            <span class="status-badge-modern yellow">
-                                <span class="status-dot-modern yellow"></span>
-                                Chờ duyệt
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-menu-btn" title="More options">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="document-item">
-                                <div class="document-item-icon purple">
-                                    <span class="material-symbols-outlined">slideshow</span>
-                                </div>
-                                <div class="document-item-info">
-                                    <h5>Slide bài 4: Kiến trúc Web</h5>
-                                    <p>Cập nhật lần cuối 2 giờ trước</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: #6b7280;">Hôm nay</td>
-                        <td style="color: #6b7280;">-</td>
-                        <td>
-                            <span class="status-badge-modern gray">
-                                <span class="status-dot-modern gray"></span>
-                                Nháp
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-menu-btn" title="More options">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="document-item">
-                                <div class="document-item-icon red">
-                                    <span class="material-symbols-outlined">picture_as_pdf</span>
-                                </div>
-                                <div class="document-item-info">
-                                    <h5>Bài tập lớn cuối kỳ</h5>
-                                    <p>Yêu cầu và tiêu chí chấm điểm</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: #6b7280;">20 Tháng 10, 2023</td>
-                        <td style="color: #111418; font-weight: 500;">205</td>
-                        <td>
-                            <span class="status-badge-modern yellow">
-                                <span class="status-dot-modern yellow"></span>
-                                Chờ duyệt
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-menu-btn" title="More options">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="document-item">
-                                <div class="document-item-icon blue">
-                                    <span class="material-symbols-outlined">description</span>
-                                </div>
-                                <div class="document-item-info">
-                                    <h5>Danh sách nhóm Project</h5>
-                                    <p>Cập nhật tiến độ tuần 5</p>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="color: #6b7280;">18 Tháng 10, 2023</td>
-                        <td style="color: #111418; font-weight: 500;">56</td>
-                        <td>
-                            <span class="status-badge-modern green">
-                                <span class="status-dot-modern green"></span>
-                                Đã đăng
-                            </span>
-                        </td>
-                        <td>
-                            <button class="action-menu-btn" title="More options">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </td>
-                    </tr>
+                    @if (ViewBag.Documents != null && ((List<DMS.Models.Document>)ViewBag.Documents).Any())
+                    {
+                        @foreach (var doc in (List<DMS.Models.Document>)ViewBag.Documents)
+                        {
+                            var fileExtension = doc.FileName?.Split('.').LastOrDefault()?.ToLower() ?? "";
+                            var fileIcon = "insert_drive_file";
+                            var iconColor = "blue";
+                            
+                            if (fileExtension == "pdf") { fileIcon = "picture_as_pdf"; iconColor = "red"; }
+                            else if (fileExtension == "doc" || fileExtension == "docx") { fileIcon = "description"; iconColor = "blue"; }
+                            else if (fileExtension == "ppt" || fileExtension == "pptx") { fileIcon = "slideshow"; iconColor = "purple"; }
+                            else if (fileExtension == "xls" || fileExtension == "xlsx") { fileIcon = "table_chart"; iconColor = "green"; }
+
+                            var statusBadgeClass = "";
+                            var statusText = "";
+                            var statusDotColor = "";
+                            
+                            if (doc.Status == DMS.Models.DocumentStatus.Approved)
+                            {
+                                statusBadgeClass = "status-badge-modern green";
+                                statusText = "Đã duyệt";
+                                statusDotColor = "green";
+                            }
+                            else if (doc.Status == DMS.Models.DocumentStatus.Pending)
+                            {
+                                statusBadgeClass = "status-badge-modern yellow";
+                                statusText = "Chờ duyệt";
+                                statusDotColor = "yellow";
+                            }
+                            else if (doc.Status == DMS.Models.DocumentStatus.Rejected)
+                            {
+                                statusBadgeClass = "status-badge-modern red";
+                                statusText = "Từ chối";
+                                statusDotColor = "red";
+                            }
+                            else
+                            {
+                                statusBadgeClass = "status-badge-modern gray";
+                                statusText = "Nháp";
+                                statusDotColor = "gray";
+                            }
+
+                            <tr>
+                                <td>
+                                    <div class="document-item">
+                                        <div class="document-item-icon @iconColor">
+                                            <span class="material-symbols-outlined">@fileIcon</span>
+                                        </div>
+                                        <div class="document-item-info">
+                                            <h5>@doc.Title</h5>
+                                            <p>@(doc.Description ?? doc.Course?.CourseName ?? "")</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="color: #6b7280;">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</td>
+                                <td style="color: #111418; font-weight: 500;">@doc.DownloadCount</td>
+                                <td>
+                                    <span class="@statusBadgeClass">
+                                        <span class="status-dot-modern @statusDotColor"></span>
+                                        @statusText
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-menu-btn" title="Xem">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </a>
+                                        <button type="button" class="action-menu-btn" title="Chia sẻ" onclick="openShareModal(@doc.Id, '@doc.Title')" style="border: none; background: none; cursor: pointer; padding: 0;">
+                                            <span class="material-symbols-outlined">share</span>
+                                        </button>
+                                        <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="action-menu-btn" title="Chỉnh sửa">
+                                            <span class="material-symbols-outlined">edit</span>
+                                        </a>
+                                        <form method="post" action="@Url.Action("Delete", "Document", new { id = doc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa tài liệu này?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@doc.Id" />
+                                            <button type="submit" class="action-menu-btn" title="Xóa" style="border: none; background: none; cursor: pointer; padding: 0;">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">
+                                Chưa có tài liệu nào. <button type="button" id="openUploadModalEmpty" onclick="openUploadModalFunc()" style="color: #0959aa; background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0;">Tải lên tài liệu đầu tiên</button>
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
             <div class="table-footer">
                 <div class="table-footer-info">
-                    Hiển thị 1-5 trên 24 tài liệu
+                    @if (ViewBag.Documents != null)
+                    {
+                        var docs = (List<DMS.Models.Document>)ViewBag.Documents;
+                        <text>Hiển thị 1-@docs.Count trên @docs.Count tài liệu</text>
+                    }
                 </div>
                 <div class="pagination-simple">
                     <button class="pagination-btn-simple" disabled>
@@ -279,6 +624,799 @@ else
     </div>
 </div>
 
+<!-- Create Folder Modal -->
+<div id="createFolderModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Tạo thư mục mới</h2>
+            <span class="close-button" onclick="closeCreateFolderModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="@Url.Action("CreateFolder", "Home")" id="createFolderForm">
+                @Html.AntiForgeryToken()
+                @if (ViewBag.CurrentFolderId != null)
+                {
+                    <input type="hidden" name="parentFolderId" value="@ViewBag.CurrentFolderId" />
+                }
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="folderName" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Tên thư mục <span style="color: #dc2626;">*</span>
+                    </label>
+                    <input type="text" name="folderName" id="folderName" required 
+                           style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; box-sizing: border-box;"
+                           placeholder="Nhập tên thư mục" />
+                    @if (ViewBag.CurrentFolderId != null)
+                    {
+                        <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">
+                            Thư mục sẽ được tạo trong thư mục hiện tại: <strong>@(((DMS.Models.Folder)ViewBag.CurrentFolder).FolderName)</strong>
+                        </small>
+                    }
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="folderCourseId" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Khóa học (tùy chọn)
+                    </label>
+                    <select name="courseId" id="folderCourseId" 
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; box-sizing: border-box;">
+                        <option value="">-- Không chọn (thư mục cá nhân) --</option>
+                        @if (ViewBag.Courses != null)
+                        {
+                            @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                            {
+                                <option value="@course.Id">@course.CourseCode - @course.CourseName</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn-cancel-inline" onclick="closeCreateFolderModal()">Hủy</button>
+                    <button type="submit" class="btn-upload-inline" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        <span class="material-symbols-outlined">create_new_folder</span>
+                        Tạo thư mục
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Chia sẻ tài liệu</h2>
+            <span class="close-button" onclick="closeShareModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="@Url.Action("Share", "Document")" id="shareForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="documentId" id="shareDocumentId" />
+                <input type="hidden" name="folderId" id="shareFolderId" style="display: none;" />
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        <span id="shareItemLabel">Tài liệu</span>
+                    </label>
+                    <div style="padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <span id="shareDocumentTitle" style="font-size: 14px; color: #111418; font-weight: 500;"></span>
+                    </div>
+                </div>
+
+                <!-- Share Type Selection -->
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 12px;">
+                        Chọn cách chia sẻ
+                    </label>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="shareTypeCourseLabel" onclick="selectShareType('course')">
+                            <input type="radio" name="shareType" value="course" id="shareTypeCourse" checked style="width: 18px; height: 18px; cursor: pointer;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #111418; margin-bottom: 4px;">Chia sẻ với khóa học</div>
+                                <div style="font-size: 12px; color: #6b7280;">Tất cả sinh viên trong khóa học sẽ có thể xem và tải xuống</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="shareTypePublicLabel" onclick="selectShareType('public')">
+                            <input type="radio" name="shareType" value="public" id="shareTypePublic" style="width: 18px; height: 18px; cursor: pointer;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #111418; margin-bottom: 4px;">Chia sẻ công khai</div>
+                                <div style="font-size: 12px; color: #6b7280;">Chia sẻ lên thư viện tài liệu (cần phê duyệt từ admin)</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" id="shareTypeLinkLabel" onclick="selectShareType('link')">
+                            <input type="radio" name="shareType" value="link" id="shareTypeLink" style="width: 18px; height: 18px; cursor: pointer;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #111418; margin-bottom: 4px;">Copy link</div>
+                                <div style="font-size: 12px; color: #6b7280;">Tạo link chia sẻ giống Google Drive</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Course Selection (shown when shareType is 'course') -->
+                <div id="shareCourseSection" style="margin-bottom: 20px;">
+                    <label for="shareCourseId" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Chia sẻ với khóa học <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="courseId" id="shareCourseId" class="form-select-inline" style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; box-sizing: border-box;">
+                        <option value="">-- Chọn khóa học --</option>
+                        @if (ViewBag.Courses != null)
+                        {
+                            @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                            {
+                                var displayText = $"{course.CourseCode}";
+                                if (!string.IsNullOrEmpty(course.ClassCode))
+                                {
+                                    displayText += $" - {course.ClassCode}";
+                                }
+                                displayText += $" - {course.CourseName}";
+                                <option value="@course.Id">@displayText</option>
+                            }
+                        }
+                    </select>
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Tất cả sinh viên trong khóa học này sẽ có thể xem và tải xuống tài liệu</small>
+                </div>
+
+                <!-- Public Share Info (shown when shareType is 'public') -->
+                <div id="sharePublicSection" style="margin-bottom: 20px; display: none; padding: 12px; background: #fef3c7; border-radius: 8px; border: 1px solid #fbbf24;">
+                    <div style="display: flex; align-items: start; gap: 8px;">
+                        <span class="material-symbols-outlined" style="color: #d97706; font-size: 20px;">info</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">Cần phê duyệt</div>
+                            <div style="font-size: 12px; color: #78350f;">Tài liệu của bạn sẽ được gửi đến admin để phê duyệt. Sau khi được phê duyệt, tài liệu sẽ xuất hiện trong thư viện tài liệu công khai.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Share Info (shown when shareType is 'link') -->
+                <div id="shareLinkSection" style="margin-bottom: 20px; display: none;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Link chia sẻ
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="shareLinkInput" readonly style="flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f9fafb; color: #111418;">
+                        <button type="button" id="copyLinkBtn" onclick="copyShareLink()" style="padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
+                            Copy
+                        </button>
+                    </div>
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Bất kỳ ai có link này đều có thể xem và tải xuống tài liệu</small>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn-cancel-inline" onclick="closeShareModal()">Hủy</button>
+                    <button type="submit" id="shareSubmitBtn" class="btn-upload-inline" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        <span class="material-symbols-outlined">share</span>
+                        <span id="shareSubmitText">Chia sẻ</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Upload Modal */
+.upload-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+}
+
+.upload-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.upload-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.upload-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.upload-modal-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0;
+}
+
+.upload-modal-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.upload-modal-close:hover {
+    background: #e5e7eb;
+    color: #111418;
+}
+
+.upload-modal-content form {
+    padding: 24px;
+}
+
+/* Upload Zone Inline */
+.upload-zone-inline {
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 32px 24px;
+    text-align: center;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+}
+
+.upload-zone-inline:hover {
+    border-color: #0959aa;
+    background: #f0f9ff;
+}
+
+.upload-zone-inline.drag-over {
+    border-color: #0959aa;
+    background: #e0f2fe;
+    border-style: solid;
+}
+
+.upload-icon-inline {
+    font-size: 48px;
+    color: #6b7280;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.upload-zone-content-inline p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 8px 0;
+}
+
+.upload-hint-inline {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 12px;
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+/* File Info Inline */
+.file-info-inline {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.file-info-header-inline {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.file-icon-inline {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: #f3f4f6;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.file-details-inline {
+    flex: 1;
+}
+
+.file-details-inline h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0 0 4px 0;
+}
+
+.file-details-inline p {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.btn-remove-inline {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-remove-inline:hover {
+    background: #e5e7eb;
+    color: #111418;
+}
+
+/* Form Fields Inline */
+.upload-form-fields-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-group-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label-inline {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111418;
+}
+
+.form-label-inline .required {
+    color: #dc2626;
+}
+
+.form-input-inline,
+.form-textarea-inline,
+.form-select-inline {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #111418;
+    transition: all 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.form-input-inline:focus,
+.form-textarea-inline:focus,
+.form-select-inline:focus {
+    outline: none;
+    border-color: #0959aa;
+    box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
+}
+
+.form-textarea-inline {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* Action Buttons Inline */
+.upload-actions-inline {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel-inline {
+    padding: 10px 20px;
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel-inline:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn-upload-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #0959aa;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-upload-inline:hover:not(:disabled) {
+    background: #075985;
+}
+
+.btn-upload-inline:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+}
+
+/* Share Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1001;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0;
+}
+
+.close-button {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+}
+
+.close-button:hover {
+    color: #111418;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+/* Google Drive Style Grid */
+.drive-grid-container {
+    padding: 16px;
+}
+
+.drive-grid-section {
+    margin-bottom: 32px;
+}
+
+.drive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    padding: 8px;
+}
+
+.drive-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    transition: all 0.2s;
+    position: relative;
+    min-height: 140px;
+}
+
+.drive-item:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-color: #d1d5db;
+}
+
+.folder-item:hover {
+    background: #f9fafb;
+}
+
+.drive-item-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.folder-icon {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.folder-icon .material-symbols-outlined {
+    color: inherit;
+}
+
+.document-icon {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.document-icon.red {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.document-icon.blue {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.document-icon.purple {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.document-icon.green {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.drive-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111418;
+    text-align: center;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.drive-item-meta {
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+    width: 100%;
+}
+
+.drive-item-menu {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.drive-menu-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.drive-menu-btn:hover {
+    background: #f3f4f6;
+    color: #111418;
+}
+
+.drive-menu-btn .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.drive-menu-dropdown {
+    position: absolute;
+    top: 36px;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    min-width: 180px;
+    z-index: 10;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.drive-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    color: #111418;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.drive-menu-item:hover {
+    background: #f9fafb;
+}
+
+.drive-menu-item .material-symbols-outlined {
+    font-size: 20px;
+    color: #6b7280;
+}
+
+/* Search and Sort Styles */
+.search-filter-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.search-box-large {
+    position: relative;
+    flex: 1;
+}
+
+.search-icon-large {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    font-size: 20px;
+    pointer-events: none;
+}
+
+.search-input-large {
+    width: 100%;
+    padding: 10px 14px 10px 44px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #111418;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.search-input-large:focus {
+    outline: none;
+    border-color: #0959aa;
+    box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
+}
+
+.sort-select {
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111418;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: #0959aa;
+    box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
+}
+
+.search-btn {
+    padding: 10px 20px;
+    background: #0959aa;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.search-btn:hover {
+    background: #075985;
+}
+
+.clear-search-btn {
+    padding: 10px 20px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.clear-search-btn:hover {
+    background: #e5e7eb;
+    color: #111418;
+}
+
+.summary-card-icon.purple {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+</style>
+
 @section Scripts {
     <script>
         // Theme toggle functionality
@@ -286,12 +1424,905 @@ else
             document.body.classList.toggle('dark-theme');
         });
 
-        // Filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
+        // Search form - allow Enter key to submit
+        const searchInput = document.querySelector('.search-input-large');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('searchForm')?.submit();
+                }
             });
+        }
+
+        // Upload Modal Functions
+        function openUploadModalFunc() {
+            const uploadModal = document.getElementById('uploadModal');
+            if (uploadModal) {
+                uploadModal.style.display = 'block';
+            }
+        }
+
+        function closeUploadModalFunc() {
+            const uploadModal = document.getElementById('uploadModal');
+            if (uploadModal) {
+                uploadModal.style.display = 'none';
+            }
+            resetUploadForm();
+        }
+
+        // Create Folder Modal Functions (Global scope for onclick handlers)
+        function openCreateFolderModalFunc() {
+            const createFolderModal = document.getElementById('createFolderModal');
+            if (createFolderModal) {
+                createFolderModal.style.display = 'block';
+            }
+        }
+
+        function closeCreateFolderModal() {
+            const createFolderModal = document.getElementById('createFolderModal');
+            if (createFolderModal) {
+                createFolderModal.style.display = 'none';
+                // Reset form
+                const createFolderForm = document.getElementById('createFolderForm');
+                if (createFolderForm) {
+                    createFolderForm.reset();
+                }
+            }
+        }
+
+        // Navigate to folder
+        function navigateToFolder(folderId) {
+            window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + folderId;
+        }
+
+        // Share Type Selection
+        function selectShareType(type) {
+            const courseSection = document.getElementById('shareCourseSection');
+            const publicSection = document.getElementById('sharePublicSection');
+            const linkSection = document.getElementById('shareLinkSection');
+            const shareCourseId = document.getElementById('shareCourseId');
+            const shareSubmitBtn = document.getElementById('shareSubmitBtn');
+            const shareSubmitText = document.getElementById('shareSubmitText');
+            const shareForm = document.getElementById('shareForm');
+            
+            // Reset all sections
+            if (courseSection) courseSection.style.display = 'none';
+            if (publicSection) publicSection.style.display = 'none';
+            if (linkSection) linkSection.style.display = 'none';
+            if (shareCourseId) shareCourseId.removeAttribute('required');
+            
+            // Update labels
+            const courseLabel = document.getElementById('shareTypeCourseLabel');
+            const publicLabel = document.getElementById('shareTypePublicLabel');
+            const linkLabel = document.getElementById('shareTypeLinkLabel');
+            
+            if (courseLabel) courseLabel.style.borderColor = '#e5e7eb';
+            if (publicLabel) publicLabel.style.borderColor = '#e5e7eb';
+            if (linkLabel) linkLabel.style.borderColor = '#e5e7eb';
+            
+            if (type === 'course') {
+                if (courseSection) courseSection.style.display = 'block';
+                if (shareCourseId) shareCourseId.setAttribute('required', 'required');
+                if (shareSubmitText) shareSubmitText.textContent = 'Chia sẻ';
+                if (shareForm) shareForm.action = '@Url.Action("Share", "Document")';
+                if (shareSubmitBtn) shareSubmitBtn.type = 'submit';
+                if (courseLabel) courseLabel.style.borderColor = '#0959aa';
+            } else if (type === 'public') {
+                if (publicSection) publicSection.style.display = 'block';
+                if (shareSubmitText) shareSubmitText.textContent = 'Gửi yêu cầu phê duyệt';
+                if (shareForm) shareForm.action = '@Url.Action("SharePublic", "Document")';
+                if (shareSubmitBtn) shareSubmitBtn.type = 'submit';
+                if (publicLabel) publicLabel.style.borderColor = '#0959aa';
+            } else if (type === 'link') {
+                if (linkSection) linkSection.style.display = 'block';
+                if (shareSubmitBtn) shareSubmitBtn.type = 'button';
+                if (shareSubmitText) shareSubmitText.textContent = 'Đã copy';
+                if (linkLabel) linkLabel.style.borderColor = '#0959aa';
+                // Generate and display link
+                generateShareLink();
+            }
+        }
+
+        function generateShareLink() {
+            const documentId = document.getElementById('shareDocumentId')?.value;
+            if (!documentId) return;
+            
+            // Call API to get or create share link
+            fetch('@Url.Action("GetShareLink", "Document")?documentId=' + documentId, {
+                method: 'GET',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.shareLink) {
+                    const linkInput = document.getElementById('shareLinkInput');
+                    if (linkInput) {
+                        linkInput.value = data.shareLink;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error generating share link:', error);
+            });
+        }
+
+        function copyShareLink() {
+            const linkInput = document.getElementById('shareLinkInput');
+            if (linkInput && linkInput.value) {
+                linkInput.select();
+                document.execCommand('copy');
+                
+                // Show feedback
+                const copyBtn = document.getElementById('copyLinkBtn');
+                if (copyBtn) {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check</span> Đã copy';
+                    copyBtn.style.background = '#16a34a';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                        copyBtn.style.background = '#0959aa';
+                    }, 2000);
+                }
+            }
+        }
+
+        // Share Modal Functions (Global scope for onclick handlers)
+        function openShareModal(documentId, documentTitle) {
+            const shareModal = document.getElementById('shareModal');
+            const shareDocumentId = document.getElementById('shareDocumentId');
+            const shareFolderId = document.getElementById('shareFolderId');
+            const shareDocumentTitle = document.getElementById('shareDocumentTitle');
+            const shareForm = document.getElementById('shareForm');
+            const shareItemLabel = document.getElementById('shareItemLabel');
+            const shareItemDescription = document.getElementById('shareItemDescription');
+            
+            if (shareModal && shareDocumentId && shareDocumentTitle && shareForm) {
+                // Reset form
+                shareDocumentId.value = documentId;
+                shareFolderId.value = '';
+                shareDocumentTitle.textContent = documentTitle;
+                shareForm.action = '@Url.Action("Share", "Document")';
+                shareForm.querySelector('input[name="documentId"]').style.display = 'block';
+                shareForm.querySelector('input[name="folderId"]').style.display = 'none';
+                shareModal.querySelector('h2').textContent = 'Chia sẻ tài liệu';
+                if (shareItemLabel) shareItemLabel.textContent = 'Tài liệu';
+                
+                // Reset share type to 'course'
+                const courseRadio = document.getElementById('shareTypeCourse');
+                if (courseRadio) {
+                    courseRadio.checked = true;
+                    selectShareType('course');
+                }
+                
+                // Reset submit button
+                const shareSubmitBtn = document.getElementById('shareSubmitBtn');
+                if (shareSubmitBtn) {
+                    shareSubmitBtn.type = 'submit';
+                }
+                
+                shareModal.style.display = 'block';
+            } else {
+                console.error('Share modal elements not found', {
+                    shareModal: !!shareModal,
+                    shareDocumentId: !!shareDocumentId,
+                    shareDocumentTitle: !!shareDocumentTitle
+                });
+            }
+        }
+
+        function openShareModalForFolder(folderId, folderName) {
+            const shareModal = document.getElementById('shareModal');
+            const shareDocumentId = document.getElementById('shareDocumentId');
+            const shareFolderId = document.getElementById('shareFolderId');
+            const shareDocumentTitle = document.getElementById('shareDocumentTitle');
+            const shareForm = document.getElementById('shareForm');
+            const shareItemLabel = document.getElementById('shareItemLabel');
+            const shareItemDescription = document.getElementById('shareItemDescription');
+            
+            if (shareModal && shareFolderId && shareDocumentTitle && shareForm) {
+                // Reset form
+                shareDocumentId.value = '';
+                shareFolderId.value = folderId;
+                shareDocumentTitle.textContent = folderName;
+                shareForm.action = '@Url.Action("Share", "Folder")';
+                shareForm.querySelector('input[name="documentId"]').style.display = 'none';
+                shareForm.querySelector('input[name="folderId"]').style.display = 'block';
+                shareModal.querySelector('h2').textContent = 'Chia sẻ thư mục';
+                if (shareItemLabel) shareItemLabel.textContent = 'Thư mục';
+                if (shareItemDescription) shareItemDescription.textContent = 'Tất cả sinh viên trong khóa học này sẽ có thể xem và truy cập thư mục';
+                shareModal.style.display = 'block';
+            } else {
+                console.error('Share modal elements not found');
+            }
+        }
+
+        function closeShareModal() {
+            const shareModal = document.getElementById('shareModal');
+            if (shareModal) {
+                shareModal.style.display = 'none';
+                // Reset form
+                const shareForm = document.getElementById('shareForm');
+                if (shareForm) {
+                    shareForm.reset();
+                    // Reset to default share type
+                    const courseRadio = shareForm.querySelector('input[name="shareType"][value="course"]');
+                    if (courseRadio) courseRadio.checked = true;
+                    toggleShareOptions();
+                }
+            }
+        }
+
+        function toggleShareOptions() {
+            const shareType = document.querySelector('input[name="shareType"]:checked')?.value;
+            const courseGroup = document.getElementById('shareCourseGroup');
+            const linkGroup = document.getElementById('shareLinkGroup');
+            const courseSelect = document.getElementById('shareCourseId');
+
+            if (shareType === 'course') {
+                if (courseGroup) courseGroup.style.display = 'block';
+                if (linkGroup) linkGroup.style.display = 'none';
+                if (courseSelect) courseSelect.required = true;
+            } else if (shareType === 'public') {
+                if (courseGroup) courseGroup.style.display = 'none';
+                if (linkGroup) linkGroup.style.display = 'none';
+                if (courseSelect) courseSelect.required = false;
+            } else if (shareType === 'link') {
+                if (courseGroup) courseGroup.style.display = 'none';
+                if (linkGroup) linkGroup.style.display = 'block';
+                if (courseSelect) courseSelect.required = false;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleShareOptions();
+            
+            // Handle share link copy after form submission
+            @if (TempData["ShareLink"] != null)
+            {
+                <text>
+                const shareLink = '@TempData["ShareLink"]';
+                if (shareLink) {
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(shareLink).then(function() {
+                        alert('Link đã được sao chép vào clipboard:\n' + shareLink);
+                    }, function() {
+                        // Fallback: show link in prompt
+                        prompt('Link chia sẻ (sao chép thủ công):', shareLink);
+                    });
+                }
+                </text>
+            }
+        });
+
+        // Upload Modal - Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadModal = document.getElementById('uploadModal');
+            const closeUploadModal = document.getElementById('closeUploadModal');
+            const uploadModalOverlay = document.getElementById('uploadModalOverlay');
+            const uploadZoneInline = document.getElementById('uploadZoneInline');
+            const fileInputInline = document.getElementById('fileInputInline');
+            const uploadFormFieldsInline = document.getElementById('uploadFormFieldsInline');
+            const descriptionInputInline = document.getElementById('descriptionInputInline');
+            const submitUploadBtn = document.getElementById('submitUploadBtn');
+            const cancelUploadBtn = document.getElementById('cancelUploadBtn');
+            const uploadForm = document.getElementById('uploadForm');
+
+            // Close modal
+            if (closeUploadModal) {
+                closeUploadModal.addEventListener('click', closeUploadModalFunc);
+            }
+            if (uploadModalOverlay) {
+                uploadModalOverlay.addEventListener('click', closeUploadModalFunc);
+            }
+            if (cancelUploadBtn) {
+                cancelUploadBtn.addEventListener('click', closeUploadModalFunc);
+            }
+
+        // Drag & Drop
+        if (uploadZoneInline) {
+            uploadZoneInline.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZoneInline.classList.add('drag-over');
+            });
+
+            uploadZoneInline.addEventListener('dragleave', () => {
+                uploadZoneInline.classList.remove('drag-over');
+            });
+
+            uploadZoneInline.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadZoneInline.classList.remove('drag-over');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && fileInputInline) {
+                    // Create a new FileList-like object and assign to input
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(files[0]);
+                    fileInputInline.files = dataTransfer.files;
+                    handleFileSelectInline(files[0]);
+                }
+            });
+
+            uploadZoneInline.addEventListener('click', () => {
+                if (fileInputInline) {
+                    fileInputInline.click();
+                }
+            });
+        }
+
+        if (fileInputInline) {
+            fileInputInline.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFilesSelectInline(Array.from(e.target.files));
+                }
+            });
+        }
+
+        let selectedFiles = [];
+
+        function handleFilesSelectInline(files) {
+            // Validate all files
+            const validFiles = [];
+            const invalidFiles = [];
+            
+            for (const file of files) {
+                if (file.size > 50 * 1024 * 1024) {
+                    invalidFiles.push(file.name);
+                } else {
+                    validFiles.push(file);
+                }
+            }
+            
+            if (invalidFiles.length > 0) {
+                alert('Các file sau quá lớn (tối đa 50MB):\n' + invalidFiles.join('\n'));
+            }
+            
+            if (validFiles.length === 0) {
+                if (submitUploadBtn) submitUploadBtn.disabled = true;
+                return;
+            }
+            
+            // Update selected files
+            selectedFiles = validFiles;
+            
+            // Display files list
+            displayFilesList(validFiles);
+            
+            // Show form fields
+            if (uploadFormFieldsInline) uploadFormFieldsInline.style.display = 'flex';
+            if (uploadZoneInline) uploadZoneInline.style.display = 'none';
+            
+            // Enable submit button
+            if (submitUploadBtn) {
+                submitUploadBtn.disabled = false;
+                console.log('Submit button enabled');
+            }
+        }
+
+        function displayFilesList(files) {
+            const filesListInline = document.getElementById('filesListInline');
+            const filesContainerInline = document.getElementById('filesContainerInline');
+            const filesCountInline = document.getElementById('filesCountInline');
+            
+            if (!filesListInline || !filesContainerInline || !filesCountInline) return;
+            
+            // Update count
+            filesCountInline.textContent = files.length;
+            
+            // Clear container
+            filesContainerInline.innerHTML = '';
+            
+            // Add each file
+            files.forEach((file, index) => {
+                const fileItem = createFileItem(file, index);
+                filesContainerInline.appendChild(fileItem);
+            });
+            
+            // Show files list
+            filesListInline.style.display = 'block';
+        }
+
+        function createFileItem(file, index) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item-inline';
+            fileItem.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;';
+            
+            // File icon
+            const fileIcon = getFileIcon(file.name);
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'file-icon-inline';
+            iconDiv.style.cssText = `width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: ${fileIcon.bgColor}; color: ${fileIcon.color};`;
+            iconDiv.innerHTML = `<span class="material-symbols-outlined">${fileIcon.icon}</span>`;
+            
+            // File details
+            const detailsDiv = document.createElement('div');
+            detailsDiv.style.cssText = 'flex: 1; min-width: 0;';
+            detailsDiv.innerHTML = `
+                <h5 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #111418; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${file.name}</h5>
+                <p style="margin: 0; font-size: 12px; color: #6b7280;">${formatFileSize(file.size)}</p>
+            `;
+            
+            // Remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-remove-inline';
+            removeBtn.style.cssText = 'width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;';
+            removeBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">close</span>';
+            removeBtn.onclick = () => removeFile(index);
+            
+            fileItem.appendChild(iconDiv);
+            fileItem.appendChild(detailsDiv);
+            fileItem.appendChild(removeBtn);
+            
+            return fileItem;
+        }
+
+        function getFileIcon(fileName) {
+            const ext = fileName.split('.').pop()?.toLowerCase();
+            if (ext === 'pdf') {
+                return { icon: 'picture_as_pdf', color: '#dc2626', bgColor: '#fee2e2' };
+            } else if (ext === 'doc' || ext === 'docx') {
+                return { icon: 'description', color: '#2563eb', bgColor: '#dbeafe' };
+            } else if (ext === 'ppt' || ext === 'pptx') {
+                return { icon: 'slideshow', color: '#ea580c', bgColor: '#fed7aa' };
+            } else if (ext === 'xls' || ext === 'xlsx') {
+                return { icon: 'table_chart', color: '#16a34a', bgColor: '#dcfce7' };
+            } else if (ext === 'zip' || ext === 'rar') {
+                return { icon: 'folder_zip', color: '#9333ea', bgColor: '#f3e8ff' };
+            }
+            return { icon: 'insert_drive_file', color: '#6b7280', bgColor: '#f3f4f6' };
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            
+            // Update file input
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(file => dataTransfer.items.add(file));
+            if (fileInputInline) {
+                fileInputInline.files = dataTransfer.files;
+            }
+            
+            if (selectedFiles.length === 0) {
+                // Reset form
+                resetUploadForm();
+            } else {
+                // Update display
+                displayFilesList(selectedFiles);
+            }
+        }
+
+
+            function resetUploadForm() {
+            if (fileInputInline) fileInputInline.value = '';
+            selectedFiles = [];
+            const filesListInline = document.getElementById('filesListInline');
+            if (filesListInline) filesListInline.style.display = 'none';
+            if (uploadFormFieldsInline) uploadFormFieldsInline.style.display = 'none';
+            if (uploadZoneInline) uploadZoneInline.style.display = 'block';
+            if (descriptionInputInline) descriptionInputInline.value = '';
+            if (submitUploadBtn) submitUploadBtn.disabled = true;
+        }
+
+            function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+            // Form submission with AJAX to handle duplicates
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    // Check if files are selected
+                    if (!fileInputInline) {
+                        alert('Lỗi: Không tìm thấy file input');
+                        return false;
+                    }
+                    
+                    if (!fileInputInline.files || fileInputInline.files.length === 0) {
+                        alert('Vui lòng chọn ít nhất một file để tải lên');
+                        return false;
+                    }
+                    
+                    // Disable button to prevent double submission
+                    if (submitUploadBtn) {
+                        submitUploadBtn.disabled = true;
+                        submitUploadBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Đang tải lên...';
+                    }
+                    
+                    // Create FormData
+                    const formData = new FormData(uploadForm);
+                    const description = document.getElementById('descriptionInputInline')?.value || '';
+                    const folderId = document.getElementById('folderSelectInline')?.value || '';
+                    
+                    // Get current folderId from URL if not in form
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const currentFolderId = urlParams.get('folderId') || folderId;
+                    
+                    formData.set('Description', description);
+                    if (folderId) {
+                        formData.set('FolderId', folderId);
+                    } else if (currentFolderId) {
+                        // If no folder selected in form but viewing a folder, use current folder
+                        formData.set('FolderId', currentFolderId);
+                    }
+                    
+                    // Get anti-forgery token
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    if (token) {
+                        formData.append('__RequestVerificationToken', token);
+                    }
+                    
+                    try {
+                        const response = await fetch(uploadForm.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'RequestVerificationToken': token || ''
+                            }
+                        });
+                        
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            // Handle JSON response (duplicates)
+                            const data = await response.json();
+                            if (data.hasDuplicates) {
+                                await handleDuplicates(data.duplicates, formData, currentFolderId || folderId || '');
+                            } else {
+                                // No duplicates, redirect with folderId
+                                if (currentFolderId || folderId) {
+                                    window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + (currentFolderId || folderId);
+                                } else {
+                                    window.location.href = '@Url.Action("MyDocuments", "Home")';
+                                }
+                            }
+                        } else {
+                            // HTML response (success or error), redirect with folderId
+                            if (currentFolderId || folderId) {
+                                window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + (currentFolderId || folderId);
+                            } else {
+                                window.location.href = '@Url.Action("MyDocuments", "Home")';
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('Lỗi khi tải lên: ' + error.message);
+                        if (submitUploadBtn) {
+                            submitUploadBtn.disabled = false;
+                            submitUploadBtn.innerHTML = '<span class="material-symbols-outlined">cloud_upload</span> Tải lên';
+                        }
+                    }
+                });
+            }
+            
+            // Handle duplicate files
+            async function handleDuplicates(duplicates, originalFormData, currentFolderId) {
+                const duplicateMap = {};
+                const replaceList = [];
+                const filesToRename = [];
+                const filesToSkip = [];
+                
+                // Show dialog for each duplicate
+                for (const dup of duplicates) {
+                    const userChoice = await showDuplicateDialog(dup.fileName);
+                    
+                    if (userChoice === 'replace') {
+                        replaceList.push({ fileName: dup.fileName, documentId: dup.documentId });
+                    } else if (userChoice === 'rename') {
+                        // Get new name from user
+                        const newName = await promptForNewName(dup.fileName);
+                        if (newName && newName !== dup.fileName) {
+                            filesToRename.push({ oldName: dup.fileName, newName: newName });
+                        } else {
+                            // User cancelled or didn't change name, skip this file
+                            filesToSkip.push(dup.fileName);
+                        }
+                    } else {
+                        // User cancelled, skip this file
+                        filesToSkip.push(dup.fileName);
+                    }
+                }
+                
+                // Process replacements
+                for (const replaceItem of replaceList) {
+                    const file = Array.from(originalFormData.getAll('Files')).find(f => f.name === replaceItem.fileName);
+                    if (file) {
+                        await replaceFile(replaceItem.documentId, replaceItem.fileName, originalFormData);
+                    }
+                }
+                
+                // Create new FormData with remaining files (excluding replaced and skipped)
+                const newFormData = new FormData();
+                const description = originalFormData.get('Description') || '';
+                const folderId = originalFormData.get('FolderId') || currentFolderId || '';
+                newFormData.set('Description', description);
+                if (folderId) {
+                    newFormData.set('FolderId', folderId);
+                }
+                
+                // Add files (excluding replaced and skipped, but including renamed)
+                const allFiles = Array.from(originalFormData.getAll('Files'));
+                const replacedFileNames = replaceList.map(r => r.fileName);
+                const skipFileNames = filesToSkip;
+                const renameMap = {};
+                filesToRename.forEach(r => renameMap[r.oldName] = r.newName);
+                
+                allFiles.forEach(file => {
+                    if (!replacedFileNames.includes(file.name) && !skipFileNames.includes(file.name)) {
+                        if (renameMap[file.name]) {
+                            // Create renamed file
+                            const renamedFile = new File([file], renameMap[file.name], { type: file.type });
+                            newFormData.append('Files', renamedFile);
+                        } else {
+                            newFormData.append('Files', file);
+                        }
+                    }
+                });
+                
+                // Submit remaining files
+                if (newFormData.getAll('Files').length > 0) {
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    if (token) {
+                        newFormData.append('__RequestVerificationToken', token);
+                    }
+                    
+                    try {
+                        const response = await fetch('@Url.Action("MyDocuments", "Home")', {
+                            method: 'POST',
+                            body: newFormData,
+                            headers: {
+                                'RequestVerificationToken': token || ''
+                            }
+                        });
+                        
+                        // Check if response is JSON (more duplicates) or HTML (success)
+                        const contentType = response.headers.get('content-type');
+                        const folderIdToRedirect = folderId || currentFolderId || '';
+                        if (contentType && contentType.includes('application/json')) {
+                            const data = await response.json();
+                            if (data.hasDuplicates) {
+                                await handleDuplicates(data.duplicates, newFormData, folderIdToRedirect);
+                            } else {
+                                if (folderIdToRedirect) {
+                                    window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + folderIdToRedirect;
+                                } else {
+                                    window.location.href = '@Url.Action("MyDocuments", "Home")';
+                                }
+                            }
+                        } else {
+                            if (folderIdToRedirect) {
+                                window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + folderIdToRedirect;
+                            } else {
+                                window.location.href = '@Url.Action("MyDocuments", "Home")';
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Re-upload error:', error);
+                        alert('Lỗi khi tải lên lại: ' + error.message);
+                        if (submitUploadBtn) {
+                            submitUploadBtn.disabled = false;
+                            submitUploadBtn.innerHTML = '<span class="material-symbols-outlined">cloud_upload</span> Tải lên';
+                        }
+                    }
+                } else {
+                    // All files were replaced or skipped
+                    if (replaceList.length > 0) {
+                        // Some files were replaced, reload page with folderId
+                        if (currentFolderId) {
+                            window.location.href = '@Url.Action("MyDocuments", "Home")?folderId=' + currentFolderId;
+                        } else {
+                            window.location.href = '@Url.Action("MyDocuments", "Home")';
+                        }
+                    } else {
+                        // All files were skipped
+                        alert('Đã hủy tải lên tất cả các file trùng tên');
+                        if (submitUploadBtn) {
+                            submitUploadBtn.disabled = false;
+                            submitUploadBtn.innerHTML = '<span class="material-symbols-outlined">cloud_upload</span> Tải lên';
+                        }
+                    }
+                }
+            }
+            
+            // Show duplicate dialog
+            function showDuplicateDialog(fileName) {
+                return new Promise((resolve) => {
+                    const modal = document.createElement('div');
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;';
+                    
+                    const content = document.createElement('div');
+                    content.style.cssText = 'background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);';
+                    
+                    content.innerHTML = `
+                        <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #111418;">File trùng tên</h3>
+                        <p style="margin: 0 0 24px 0; color: #6b7280;">Đã tồn tại file với tên "<strong>${fileName}</strong>". Bạn muốn làm gì?</p>
+                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                            <button class="btn-cancel-duplicate" style="padding: 10px 20px; background: #f3f4f6; color: #6b7280; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Hủy</button>
+                            <button class="btn-rename-duplicate" style="padding: 10px 20px; background: #fef3c7; color: #78350f; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Đổi tên</button>
+                            <button class="btn-replace-duplicate" style="padding: 10px 20px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Thay thế</button>
+                        </div>
+                    `;
+                    
+                    const cancelBtn = content.querySelector('.btn-cancel-duplicate');
+                    const renameBtn = content.querySelector('.btn-rename-duplicate');
+                    const replaceBtn = content.querySelector('.btn-replace-duplicate');
+                    
+                    cancelBtn.onclick = () => {
+                        document.body.removeChild(modal);
+                        resolve('cancel');
+                    };
+                    
+                    renameBtn.onclick = () => {
+                        document.body.removeChild(modal);
+                        resolve('rename');
+                    };
+                    
+                    replaceBtn.onclick = () => {
+                        document.body.removeChild(modal);
+                        resolve('replace');
+                    };
+                    
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                });
+            }
+            
+            // Prompt for new name
+            function promptForNewName(oldFileName) {
+                return new Promise((resolve) => {
+                    const modal = document.createElement('div');
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;';
+                    
+                    const content = document.createElement('div');
+                    content.style.cssText = 'background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);';
+                    
+                    const ext = oldFileName.split('.').pop();
+                    const nameWithoutExt = oldFileName.substring(0, oldFileName.lastIndexOf('.'));
+                    
+                    content.innerHTML = `
+                        <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #111418;">Đổi tên file</h3>
+                        <p style="margin: 0 0 16px 0; color: #6b7280;">Nhập tên mới cho file:</p>
+                        <input type="text" id="newFileNameInput" value="${nameWithoutExt}" style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 20px; box-sizing: border-box;" />
+                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                            <button class="btn-cancel-rename" style="padding: 10px 20px; background: #f3f4f6; color: #6b7280; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Hủy</button>
+                            <button class="btn-confirm-rename" style="padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Xác nhận</button>
+                        </div>
+                    `;
+                    
+                    const input = content.querySelector('#newFileNameInput');
+                    const cancelBtn = content.querySelector('.btn-cancel-rename');
+                    const confirmBtn = content.querySelector('.btn-confirm-rename');
+                    
+                    // Select text for easy editing
+                    setTimeout(() => {
+                        input.select();
+                    }, 100);
+                    
+                    const handleConfirm = () => {
+                        const newName = input.value.trim();
+                        if (newName) {
+                            const finalName = newName + (ext ? '.' + ext : '');
+                            document.body.removeChild(modal);
+                            resolve(finalName);
+                        }
+                    };
+                    
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            handleConfirm();
+                        }
+                    });
+                    
+                    cancelBtn.onclick = () => {
+                        document.body.removeChild(modal);
+                        resolve(null);
+                    };
+                    
+                    confirmBtn.onclick = handleConfirm;
+                    
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                });
+            }
+            
+            // Replace file
+            async function replaceFile(documentId, fileName, formData) {
+                const file = Array.from(formData.getAll('Files')).find(f => f.name === fileName);
+                if (!file) {
+                    console.warn(`File ${fileName} not found in formData`);
+                    return;
+                }
+                
+                const replaceFormData = new FormData();
+                replaceFormData.append('documentId', documentId);
+                replaceFormData.append('file', file);
+                replaceFormData.append('description', formData.get('Description') || '');
+                const folderId = formData.get('FolderId');
+                if (folderId) {
+                    replaceFormData.append('folderId', folderId);
+                }
+                
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                if (token) {
+                    replaceFormData.append('__RequestVerificationToken', token);
+                }
+                
+                try {
+                    const response = await fetch('@Url.Action("ReplaceDocument", "Home")', {
+                        method: 'POST',
+                        body: replaceFormData
+                    });
+                    
+                    const result = await response.json();
+                    if (!result.success) {
+                        alert('Lỗi khi thay thế file "' + fileName + '": ' + result.message);
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    console.error('Replace error:', error);
+                    alert('Lỗi khi thay thế file "' + fileName + '": ' + error.message);
+                    throw error;
+                }
+            }
+
+            // Close share modal when clicking outside
+            window.addEventListener('click', (event) => {
+                const shareModal = document.getElementById('shareModal');
+                if (event.target == shareModal) {
+                    closeShareModal();
+                }
+                const createFolderModal = document.getElementById('createFolderModal');
+                if (event.target == createFolderModal) {
+                    closeCreateFolderModal();
+                }
+            });
+        });
+
+        // Toggle folder menu
+        function toggleFolderMenu(folderId) {
+            // Close all other menus
+            document.querySelectorAll('.drive-menu-dropdown').forEach(menu => {
+                if (menu.id !== 'folderMenu' + folderId) {
+                    menu.style.display = 'none';
+                }
+            });
+
+            const menu = document.getElementById('folderMenu' + folderId);
+            if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Toggle document menu
+        function toggleDocumentMenu(documentId) {
+            // Close all other menus
+            document.querySelectorAll('.drive-menu-dropdown').forEach(menu => {
+                if (menu.id !== 'documentMenu' + documentId) {
+                    menu.style.display = 'none';
+                }
+            });
+
+            const menu = document.getElementById('documentMenu' + documentId);
+            if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.drive-item-menu')) {
+                document.querySelectorAll('.drive-menu-dropdown').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
         });
     </script>
 }

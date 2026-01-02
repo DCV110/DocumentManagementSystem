@@ -43,7 +43,14 @@ namespace DMS.Controllers
                 return View();
             }
 
-            var result = await _signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: false);
+            // Sử dụng PasswordSignInAsync với isPersistent = rememberMe
+            // isPersistent = true: Cookie sẽ tồn tại lâu (theo ExpireTimeSpan trong cookie config)
+            // isPersistent = false: Cookie sẽ là session cookie (hết khi đóng browser)
+            var result = await _signInManager.PasswordSignInAsync(
+                user, 
+                password, 
+                isPersistent: rememberMe, // Remember Me checkbox
+                lockoutOnFailure: false);
             
             if (result.Succeeded)
             {
@@ -52,6 +59,12 @@ namespace DMS.Controllers
                     return Redirect(returnUrl);
                 }
                 return RedirectToAction("Index", "Home");
+            }
+
+            if (result.IsLockedOut)
+            {
+                ModelState.AddModelError("", "Tài khoản của bạn đã bị khóa. Vui lòng thử lại sau.");
+                return View();
             }
 
             ModelState.AddModelError("", "Email hoặc mật khẩu không đúng.");

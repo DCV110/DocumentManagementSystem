@@ -1,12 +1,29 @@
 @{
     ViewData["Title"] = "Thư viện tài liệu";
-    Layout = "_DashboardLayout"; // Sinh viên dùng DashboardLayout
+    // Use appropriate layout based on user role
+    var isStudent = ViewBag.IsStudent != null ? (bool)ViewBag.IsStudent : User.IsInRole("Student");
+    Layout = isStudent ? "_DashboardLayout" : "_SidebarLayout";
 }
 
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 
-<div class="dashboard-header">
+@if (!isStudent)
+{
+    // Render appropriate sidebar for Instructor or Admin
+    if (User.IsInRole("Admin"))
+    {
+        <partial name="_AdminSidebar" />
+    }
+    else if (User.IsInRole("Instructor"))
+    {
+        <partial name="_InstructorSidebar" />
+    }
+}
+
+@if (isStudent)
+{
+    <div class="dashboard-header">
     <div class="header-left">
         <div class="logo-icon">
             <span class="material-symbols-outlined icon-fill">school</span>
@@ -21,20 +38,6 @@
         <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
     </div>
     <div class="header-actions">
-        <div class="header-search">
-            <span class="material-symbols-outlined search-icon-header">search</span>
-            <form method="get" action="@Url.Action("Library", "Document")" style="display: flex; flex: 1;">
-                @if (ViewBag.CourseId != null)
-                {
-                    <input type="hidden" name="courseId" value="@ViewBag.CourseId" />
-                }
-                @if (ViewBag.SortBy != null)
-                {
-                    <input type="hidden" name="sortBy" value="@ViewBag.SortBy" />
-                }
-                <input type="text" name="search" class="header-search-input" placeholder="Search shared files..." value="@ViewBag.Search" />
-            </form>
-        </div>
         <button class="notification-btn">
             <span class="material-symbols-outlined">notifications</span>
             <span class="notification-badge"></span>
@@ -64,7 +67,10 @@
         </div>
     </div>
 </div>
+}
 
+@if (isStudent)
+{
 <main class="dashboard-main">
     <div class="dashboard-title-section">
         <div>
@@ -84,32 +90,48 @@
 
         <!-- Filters and Search -->
         <div class="filters-row">
-            <div class="filter-dropdown">
-                <select class="filter-select-input">
-                    <option>Access Level</option>
-                    <option>Can View</option>
-                    <option>Can Edit</option>
-                    <option>Can Comment</option>
-                </select>
+            <div class="search-box-container">
+                <form method="get" action="@Url.Action("Library", "Document")" class="search-form">
+                    @if (ViewBag.CourseId != null)
+                    {
+                        <input type="hidden" name="courseId" value="@ViewBag.CourseId" />
+                    }
+                    @if (ViewBag.SortBy != null)
+                    {
+                        <input type="hidden" name="sortBy" value="@ViewBag.SortBy" />
+                    }
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" name="search" class="search-input" placeholder="Tìm kiếm tài liệu..." value="@ViewBag.Search" />
+                    <button type="submit" class="search-submit-btn">Tìm kiếm</button>
+                </form>
             </div>
-            <div class="filter-dropdown">
-                <select class="filter-select-input">
-                    <option>File Type</option>
-                    <option>PDF</option>
-                    <option>Word</option>
-                    <option>Excel</option>
-                    <option>PowerPoint</option>
-                </select>
-            </div>
-            <div class="filter-dropdown">
-                <select class="filter-select-input">
-                    <option>Date Shared</option>
-                    <option>Last Week</option>
-                    <option>Last Month</option>
-                    <option>Last 3 Months</option>
-                </select>
-            </div>
-            <div class="sort-by">
+            <div class="filters-controls">
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>Access Level</option>
+                        <option>Can View</option>
+                        <option>Can Edit</option>
+                        <option>Can Comment</option>
+                    </select>
+                </div>
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>File Type</option>
+                        <option>PDF</option>
+                        <option>Word</option>
+                        <option>Excel</option>
+                        <option>PowerPoint</option>
+                    </select>
+                </div>
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>Date Shared</option>
+                        <option>Last Week</option>
+                        <option>Last Month</option>
+                        <option>Last 3 Months</option>
+                    </select>
+                </div>
+                <div class="sort-by">
                 <span>Sort by: </span>
                 <form method="get" action="@Url.Action("Library", "Document")" style="display: inline;">
                     @if (!string.IsNullOrEmpty(ViewBag.Search))
@@ -126,6 +148,7 @@
                         <option value="name" selected="@(ViewBag.SortBy == "name")">Name (A-Z)</option>
                     </select>
                 </form>
+                </div>
             </div>
         </div>
 
@@ -219,7 +242,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="5" class="empty-table-state">
+                                <td colspan="7" class="empty-table-state">
                                     <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">folder_off</span>
                                     <h3>Không tìm thấy tài liệu</h3>
                                     <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
@@ -230,7 +253,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5" class="empty-table-state">
+                            <td colspan="7" class="empty-table-state">
                                 <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">folder_off</span>
                                 <h3>Không tìm thấy tài liệu</h3>
                                 <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
@@ -280,10 +303,262 @@
         </div>
     }
 </main>
+}
+else
+{
+<div class="main-content">
+    <!-- Header for Instructor/Admin -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Thư viện tài liệu</h1>
+            <p>Tìm kiếm và tải xuống tài liệu công khai</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+    <!-- Content Body -->
+    <div class="content-body">
+
+    <!-- Documents Section -->
+    <div class="documents-section">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Documents</h2>
+                <p class="section-subtitle">Manage documents shared by colleagues, professors, and students.</p>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="filters-row">
+            <div class="search-box-container">
+                <form method="get" action="@Url.Action("Library", "Document")" class="search-form">
+                    @if (ViewBag.CourseId != null)
+                    {
+                        <input type="hidden" name="courseId" value="@ViewBag.CourseId" />
+                    }
+                    @if (ViewBag.SortBy != null)
+                    {
+                        <input type="hidden" name="sortBy" value="@ViewBag.SortBy" />
+                    }
+                    <span class="material-symbols-outlined search-icon">search</span>
+                    <input type="text" name="search" class="search-input" placeholder="Tìm kiếm tài liệu..." value="@ViewBag.Search" />
+                    <button type="submit" class="search-submit-btn">Tìm kiếm</button>
+                </form>
+            </div>
+            <div class="filters-controls">
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>Access Level</option>
+                        <option>Can View</option>
+                        <option>Can Edit</option>
+                        <option>Can Comment</option>
+                    </select>
+                </div>
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>File Type</option>
+                        <option>PDF</option>
+                        <option>Word</option>
+                        <option>Excel</option>
+                        <option>PowerPoint</option>
+                    </select>
+                </div>
+                <div class="filter-dropdown">
+                    <select class="filter-select-input">
+                        <option>Date Shared</option>
+                        <option>Last Week</option>
+                        <option>Last Month</option>
+                        <option>Last 3 Months</option>
+                    </select>
+                </div>
+                <div class="sort-by">
+                <span>Sort by: </span>
+                <form method="get" action="@Url.Action("Library", "Document")" style="display: inline;">
+                    @if (!string.IsNullOrEmpty(ViewBag.Search))
+                    {
+                        <input type="hidden" name="search" value="@ViewBag.Search" />
+                    }
+                    @if (ViewBag.CourseId != null)
+                    {
+                        <input type="hidden" name="courseId" value="@ViewBag.CourseId" />
+                    }
+                    <select name="sortBy" onchange="this.form.submit()" class="sort-select">
+                        <option value="newest" selected="@(ViewBag.SortBy == "newest" || ViewBag.SortBy == null)">Date (Newest)</option>
+                        <option value="oldest" selected="@(ViewBag.SortBy == "oldest")">Date (Oldest)</option>
+                        <option value="name" selected="@(ViewBag.SortBy == "name")">Name (A-Z)</option>
+                    </select>
+                </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="documents-table-container">
+            <table class="documents-table">
+                <thead>
+                    <tr>
+                        <th>DOCUMENT NAME</th>
+                        <th>SHARED BY</th>
+                        <th>DATE</th>
+                        <th>ACCESS</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (ViewBag.Documents != null)
+                    {
+                        var documents = ViewBag.Documents as List<DMS.Models.Document>;
+                        @if (documents != null && documents.Any())
+                        {
+                            @foreach (var doc in documents)
+                            {
+                                @if (doc != null)
+                                {
+                                    var fileSize = doc.FilePath != null ? "2.4 MB" : "N/A";
+                                    var fileExtension = doc.FileName?.Split('.').LastOrDefault()?.ToLower() ?? "";
+                                    var fileTypeIcon = "insert_drive_file";
+                                    var fileTypeColor = "#6b7280";
+                                    
+                                    if (fileExtension == "pdf")
+                                    {
+                                        fileTypeIcon = "picture_as_pdf";
+                                        fileTypeColor = "#dc2626";
+                                    }
+                                    else if (fileExtension == "doc" || fileExtension == "docx")
+                                    {
+                                        fileTypeIcon = "description";
+                                        fileTypeColor = "#2563eb";
+                                    }
+                                    else if (fileExtension == "xls" || fileExtension == "xlsx")
+                                    {
+                                        fileTypeIcon = "table_chart";
+                                        fileTypeColor = "#16a34a";
+                                    }
+                                    else if (fileExtension == "ppt" || fileExtension == "pptx")
+                                    {
+                                        fileTypeIcon = "slideshow";
+                                        fileTypeColor = "#ea580c";
+                                    }
+                                    
+                                    <tr>
+                                        <td>
+                                            <div class="document-name-cell">
+                                                <span class="material-symbols-outlined file-type-icon" style="color: @fileTypeColor;">@fileTypeIcon</span>
+                                                <div>
+                                                    <div class="document-name">@doc.Title</div>
+                                                    <div class="document-size">@fileSize</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="shared-by-cell">
+                                                <div class="user-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@(doc.User?.FullName ?? "User")&background=0959aa&color=fff')"></div>
+                                                <div>
+                                                    <div class="user-name">@(doc.User?.FullName ?? "Unknown")</div>
+                                                    <div class="user-role">@(doc.Course?.CourseName ?? "Course")</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="date-cell">@doc.UploadDate.ToString("MMM dd, yyyy")</div>
+                                        </td>
+                                        <td>
+                                            <span class="access-badge can-view">Can View</span>
+                                        </td>
+                                        <td>
+                                            <div class="actions-cell">
+                                                <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-link" title="View">
+                                                    <span class="material-symbols-outlined">visibility</span>
+                                                </a>
+                                                <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-link" title="Download">
+                                                    <span class="material-symbols-outlined">download</span>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="empty-table-state">
+                                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">folder_off</span>
+                                    <h3>Không tìm thấy tài liệu</h3>
+                                    <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="empty-table-state">
+                                <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">folder_off</span>
+                                <h3>Không tìm thấy tài liệu</h3>
+                                <p>Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+    <!-- Pagination -->
+    @{
+        var totalDocs = ViewBag.TotalDocuments ?? 0;
+        var pageSize = 5;
+        var currentPage = ViewBag.Page ?? 1;
+        var startItem = totalDocs > 0 ? ((currentPage - 1) * pageSize) + 1 : 0;
+        var endItem = Math.Min(currentPage * pageSize, totalDocs);
+    }
+    @if (totalDocs > 0)
+    {
+        <div class="pagination-wrapper">
+            <div class="pagination-info">
+                Showing @startItem to @endItem of @totalDocs results.
+            </div>
+            <div class="pagination-buttons">
+                @if (currentPage > 1)
+                {
+                    <a href="@Url.Action("Library", "Document", new { page = currentPage - 1, search = ViewBag.Search, courseId = ViewBag.CourseId, sortBy = ViewBag.SortBy })" class="pagination-btn">
+                        Previous
+                    </a>
+                }
+                else
+                {
+                    <span class="pagination-btn disabled">Previous</span>
+                }
+                @if (currentPage < ViewBag.TotalPages)
+                {
+                    <a href="@Url.Action("Library", "Document", new { page = currentPage + 1, search = ViewBag.Search, courseId = ViewBag.CourseId, sortBy = ViewBag.SortBy })" class="pagination-btn">
+                        Next
+                    </a>
+                }
+                else
+                {
+                    <span class="pagination-btn disabled">Next</span>
+                }
+            </div>
+        </div>
+    }
+    </div>
+    </div>
+</div>
+}
 
 <style>
-/* Header Search */
-.header-search {
+/* Search Box in Filters */
+.search-box-container {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.search-form {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -291,23 +566,22 @@
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 8px 12px;
-    min-width: 300px;
     transition: all 0.2s;
 }
 
-.header-search:focus-within {
+.search-form:focus-within {
     background: white;
     border-color: #0959aa;
     box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
 }
 
-.search-icon-header {
+.search-icon {
     font-size: 20px;
     color: #6b7280;
     flex-shrink: 0;
 }
 
-.header-search-input {
+.search-input {
     flex: 1;
     border: none;
     outline: none;
@@ -317,8 +591,24 @@
     font-family: inherit;
 }
 
-.header-search-input::placeholder {
+.search-input::placeholder {
     color: #9ca3af;
+}
+
+.search-submit-btn {
+    padding: 6px 16px;
+    background: #0959aa;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-submit-btn:hover {
+    background: #084a8f;
 }
 
 .settings-btn {
@@ -369,9 +659,15 @@
 /* Filters Row */
 .filters-row {
     display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.filters-controls {
+    display: flex;
     gap: 16px;
     align-items: center;
-    margin-bottom: 24px;
     flex-wrap: wrap;
 }
 
@@ -527,6 +823,15 @@
 .date-cell {
     font-size: 14px;
     color: #6b7280;
+}
+
+/* Stats Cell */
+.stats-cell {
+    display: flex;
+    align-items: center;
+    color: #111418;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 /* Access Badge */

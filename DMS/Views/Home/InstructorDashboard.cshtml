@@ -32,36 +32,28 @@
                 <p class="kpi-label">Tổng số tài liệu</p>
                 <span class="material-symbols-outlined kpi-icon blue icon-fill">description</span>
             </div>
-            <p class="kpi-value">156</p>
-            <p class="kpi-description" style="color: #16a34a;">
-                <span style="color: #16a34a;">↑</span> +12 tháng này
-            </p>
+            <p class="kpi-value">@(ViewBag.TotalDocuments ?? 0)</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
                 <p class="kpi-label">Tổng lượt xem</p>
                 <span class="material-symbols-outlined kpi-icon green">visibility</span>
             </div>
-            <p class="kpi-value">1,204</p>
-            <p class="kpi-description" style="color: #16a34a;">
-                <span style="color: #16a34a;">↑</span> +8% so với tháng trước
-            </p>
+            <p class="kpi-value">@(ViewBag.TotalViews ?? 0)</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
                 <p class="kpi-label">Lượt tải xuống</p>
                 <span class="material-symbols-outlined kpi-icon" style="color: #9333ea;">download</span>
             </div>
-            <p class="kpi-value">892</p>
-            <p class="kpi-description">Tổng cộng các học kỳ</p>
+            <p class="kpi-value">@(ViewBag.TotalDownloads ?? 0)</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
                 <p class="kpi-label">Chờ phê duyệt</p>
                 <span class="material-symbols-outlined kpi-icon" style="color: #f97316;">hourglass_empty</span>
             </div>
-            <p class="kpi-value">24</p>
-            <p class="kpi-description" style="color: #f97316;">Cần theo dõi</p>
+            <p class="kpi-value">@(ViewBag.RejectedDocuments ?? 0)</p>
         </div>
     </div>
 
@@ -72,48 +64,40 @@
             <a href="#" style="color: #0959aa; font-size: 14px; font-weight: 500; text-decoration: none;">Xem tất cả</a>
         </div>
         <div class="courses-grid">
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon blue">
-                            <span class="material-symbols-outlined">code</span>
-                        </div>
-                        <div class="course-details">
-                            <h4>Nhập môn Lập trình</h4>
-                            <p>CS101 • HK1 2023-2024</p>
-                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">45 Tài liệu</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon green">
-                            <span class="material-symbols-outlined">account_tree</span>
-                        </div>
-                        <div class="course-details">
-                            <h4>Cấu trúc dữ liệu</h4>
-                            <p>CS201 • HK1 2023-2024</p>
-                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">38 Tài liệu</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon purple">
-                            <span class="material-symbols-outlined">psychology</span>
-                        </div>
-                        <div class="course-details">
-                            <h4>Trí tuệ nhân tạo</h4>
-                            <p>CS301 • HK1 2023-2024</p>
-                            <p style="font-size: 12px; color: #60758a; margin-top: 4px;">52 Tài liệu</p>
+            @if (ViewBag.Courses != null)
+            {
+                @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                {
+                    var iconColors = new[] { "blue", "green", "purple" };
+                    var iconIndex = course.Id % 3;
+                    var icons = new[] { "code", "account_tree", "psychology" };
+                    
+                    <div class="course-card" style="cursor: pointer;" onclick="window.location.href='@Url.Action("CourseDetails", "Home", new { id = course.Id })'">
+                        <div class="course-header">
+                            <div class="course-info">
+                                <div class="course-icon @iconColors[iconIndex]">
+                                    <span class="material-symbols-outlined">@icons[iconIndex]</span>
+                                </div>
+                                <div class="course-details">
+                                    <h4>@course.CourseName</h4>
+                                    <p>@course.CourseCode@(!string.IsNullOrEmpty(course.ClassCode) ? $" - {course.ClassCode}" : "")</p>
+                                    @{
+                                        var courseItemCounts = ViewBag.CourseItemCounts as System.Collections.Generic.Dictionary<int, int>;
+                                        var itemCount = courseItemCounts != null && courseItemCounts.ContainsKey(course.Id) 
+                                            ? courseItemCounts[course.Id] 
+                                            : (course.Documents?.Count ?? 0);
+                                    }
+                                    <p style="font-size: 12px; color: #60758a; margin-top: 4px;">@itemCount mục</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                }
+            }
+            @if (ViewBag.Courses == null || ((List<DMS.Models.Course>)ViewBag.Courses).Count == 0)
+            {
+                <p style="color: #60758a; padding: 16px;">Chưa có khóa học nào</p>
+            }
         </div>
     </div>
 
@@ -166,151 +150,108 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon blue">
-                                <span class="material-symbols-outlined">slideshow</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Bài giảng Chương 5.pptx</h5>
-                                <p>PPTX • 2.4 MB</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>CS101</td>
-                    <td style="color: #60758a; font-size: 14px;">25 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">
-                            <span class="status-dot" style="background: #dc2626;"></span>
-                            Đang chờ duyệt
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">1,204 lượt xem</span>
-                            <button class="action-btn" title="Xem">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn" title="Chỉnh sửa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
-                            </button>
-                            <button class="action-btn" title="Xóa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon blue">
-                                <span class="material-symbols-outlined">picture_as_pdf</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Tài liệu tham khảo.pdf</h5>
-                                <p>PDF • 1.8 MB</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>CS201</td>
-                    <td style="color: #60758a; font-size: 14px;">24 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
-                            Đã duyệt
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">856 lượt xem</span>
-                            <button class="action-btn" title="Xem">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn" title="Chỉnh sửa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
-                            </button>
-                            <button class="action-btn" title="Xóa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon blue">
-                                <span class="material-symbols-outlined">description</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Đề thi giữa kỳ.docx</h5>
-                                <p>DOCX • 456 KB</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>CS301</td>
-                    <td style="color: #60758a; font-size: 14px;">23 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">close</span>
-                            Yêu cầu chỉnh sửa
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">342 lượt xem</span>
-                            <button class="action-btn" title="Xem">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn" title="Chỉnh sửa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
-                            </button>
-                            <button class="action-btn" title="Xóa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon blue">
-                                <span class="material-symbols-outlined">picture_as_pdf</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Hướng dẫn thực hành.pdf</h5>
-                                <p>PDF • 3.2 MB</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>CS101</td>
-                    <td style="color: #60758a; font-size: 14px;">22 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
-                            Đã duyệt
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <span style="font-size: 12px; color: #60758a; margin-right: 8px;">1,089 lượt xem</span>
-                            <button class="action-btn" title="Xem">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn" title="Chỉnh sửa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
-                            </button>
-                            <button class="action-btn" title="Xóa">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+                @if (ViewBag.Documents != null && ((List<DMS.Models.Document>)ViewBag.Documents).Any())
+                {
+                    @foreach (var doc in (List<DMS.Models.Document>)ViewBag.Documents)
+                    {
+                        var fileExtension = doc.FileName?.Split('.').LastOrDefault()?.ToLower() ?? "";
+                        var fileIcon = "insert_drive_file";
+                        var fileSizeMB = (doc.FileSize / 1024.0 / 1024.0).ToString("F1");
+                        
+                        if (fileExtension == "pdf") fileIcon = "picture_as_pdf";
+                        else if (fileExtension == "doc" || fileExtension == "docx") fileIcon = "description";
+                        else if (fileExtension == "ppt" || fileExtension == "pptx") fileIcon = "slideshow";
+                        else if (fileExtension == "xls" || fileExtension == "xlsx") fileIcon = "table_chart";
+
+                        var statusBadgeClass = "";
+                        var statusText = "";
+                        var statusIcon = "";
+                        
+                        if (doc.Status == DMS.Models.DocumentStatus.Approved)
+                        {
+                            statusBadgeClass = "background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);";
+                            statusText = "Đã duyệt";
+                            statusIcon = "check_circle";
+                        }
+                        else if (doc.Status == DMS.Models.DocumentStatus.Pending)
+                        {
+                            statusBadgeClass = "background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);";
+                            statusText = "Chờ duyệt";
+                            statusIcon = "hourglass_empty";
+                        }
+                        else if (doc.Status == DMS.Models.DocumentStatus.Rejected)
+                        {
+                            statusBadgeClass = "background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);";
+                            statusText = "Từ chối";
+                            statusIcon = "close";
+                        }
+                        else
+                        {
+                            statusBadgeClass = "background: #f3f4f6; color: #6b7280; border-color: rgba(107, 114, 128, 0.2);";
+                            statusText = "Nháp";
+                            statusIcon = "draft";
+                        }
+
+                        <tr>
+                            <td>
+                                <div class="document-info">
+                                    <div class="document-icon blue">
+                                        <span class="material-symbols-outlined">@fileIcon</span>
+                                    </div>
+                                    <div class="document-details">
+                                        <h5>@doc.Title</h5>
+                                        <p>@fileExtension.ToUpper() • @fileSizeMB MB</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>@(doc.Course?.CourseCode ?? "N/A")</td>
+                            <td style="color: #60758a; font-size: 14px;">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</td>
+                            <td>
+                                <span class="status-badge" style="@statusBadgeClass">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">@statusIcon</span>
+                                    @statusText
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons-group">
+                                    <span style="font-size: 12px; color: #60758a; margin-right: 8px;">@doc.ViewCount lượt xem</span>
+                                    <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem">
+                                        <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                                    </a>
+                                    <button type="button" class="action-btn" title="Chia sẻ" onclick="openShareModal(@doc.Id, '@doc.Title')" style="border: none; background: none; cursor: pointer; padding: 0;">
+                                        <span class="material-symbols-outlined" style="font-size: 20px;">share</span>
+                                    </button>
+                                    <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="action-btn" title="Chỉnh sửa">
+                                        <span class="material-symbols-outlined" style="font-size: 20px;">edit</span>
+                                    </a>
+                                    <form method="post" action="@Url.Action("Delete", "Document", new { id = doc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa tài liệu này?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="action-btn" title="Xóa" style="border: none; background: none; cursor: pointer; padding: 0;">
+                                            <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 32px; color: #6b7280;">
+                            Chưa có tài liệu nào
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
         <div class="pagination-wrapper">
             <div class="pagination-info">
-                Hiển thị <strong>1</strong> đến <strong>4</strong> trong số <strong>156</strong> kết quả
+                @if (ViewBag.Documents != null)
+                {
+                    var docs = (List<DMS.Models.Document>)ViewBag.Documents;
+                    <text>Hiển thị <strong>1</strong> đến <strong>@docs.Count</strong> trong số <strong>@(ViewBag.TotalDocuments ?? 0)</strong> kết quả</text>
+                }
             </div>
             <div class="pagination">
                 <button class="pagination-btn">
@@ -328,4 +269,92 @@
     </div>
 </div>
 </div>
+
+<!-- Share Modal -->
+<div id="shareModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; background: rgba(0, 0, 0, 0.5); align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: white; border-radius: 12px; width: 90%; max-width: 500px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111418;">Chia sẻ tài liệu</h2>
+            <span class="close-button" onclick="closeShareModal()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="@Url.Action("Share", "Document")" id="shareForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="documentId" id="shareDocumentId" />
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Tài liệu
+                    </label>
+                    <div style="padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                        <span id="shareDocumentTitle" style="font-size: 14px; color: #111418; font-weight: 500;"></span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="shareCourseId" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                        Chia sẻ với khóa học <span style="color: #dc2626;">*</span>
+                    </label>
+                    <select name="courseId" id="shareCourseId" required style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; box-sizing: border-box;">
+                        <option value="">-- Chọn khóa học --</option>
+                        @if (ViewBag.AllCourses != null)
+                        {
+                            @foreach (var course in (List<DMS.Models.Course>)ViewBag.AllCourses)
+                            {
+                                var displayText = $"{course.CourseCode}";
+                                if (!string.IsNullOrEmpty(course.ClassCode))
+                                {
+                                    displayText += $" - {course.ClassCode}";
+                                }
+                                displayText += $" - {course.CourseName}";
+                                <option value="@course.Id">@displayText</option>
+                            }
+                        }
+                    </select>
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Tất cả sinh viên trong khóa học này sẽ có thể xem và tải xuống tài liệu</small>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <button type="button" onclick="closeShareModal()" style="padding: 10px 20px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; cursor: pointer;">Hủy</button>
+                    <button type="submit" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        <span class="material-symbols-outlined">share</span>
+                        Chia sẻ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openShareModal(documentId, documentTitle) {
+        const shareModal = document.getElementById('shareModal');
+        const shareDocumentId = document.getElementById('shareDocumentId');
+        const shareDocumentTitle = document.getElementById('shareDocumentTitle');
+        
+        if (shareModal && shareDocumentId && shareDocumentTitle) {
+            shareDocumentId.value = documentId;
+            shareDocumentTitle.textContent = documentTitle;
+            shareModal.style.display = 'flex';
+        }
+    }
+
+    function closeShareModal() {
+        const shareModal = document.getElementById('shareModal');
+        if (shareModal) {
+            shareModal.style.display = 'none';
+            const shareForm = document.getElementById('shareForm');
+            if (shareForm) {
+                shareForm.reset();
+            }
+        }
+    }
+
+    window.addEventListener('click', (event) => {
+        const shareModal = document.getElementById('shareModal');
+        if (event.target == shareModal) {
+            closeShareModal();
+        }
+    });
+</script>
 

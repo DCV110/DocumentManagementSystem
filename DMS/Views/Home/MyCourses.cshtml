@@ -64,18 +64,27 @@
             @if (courses != null && courses.Any())
             {
                 <div class="courses-grid">
+                    @{
+                        var colors = new[] { "blue", "purple", "green", "orange", "red" };
+                        var icons = new[] { "book", "code", "language", "psychology", "science" };
+                        var index = 0;
+                    }
                     @foreach (var course in courses)
                     {
                         @if (course != null)
                         {
                             var documentCount = course.Documents?.Count ?? 0;
-                            var progress = new Random().Next(30, 100); // Tạm thời random, sau này sẽ tính từ dữ liệu thực
+                            var sevenDaysAgo = DateTime.Now.AddDays(-7);
+                            var newDocumentsCount = course.Documents?.Where(d => d.UploadDate >= sevenDaysAgo).Count() ?? 0;
+                            var colorIndex = index % colors.Length;
+                            var iconIndex = index % icons.Length;
+                            index++;
                             
                             <div class="course-card">
                                 <div class="course-header">
                                     <div class="course-info">
-                                        <div class="course-icon blue">
-                                            <span class="material-symbols-outlined">book</span>
+                                        <div class="course-icon @colors[colorIndex]">
+                                            <span class="material-symbols-outlined">@icons[iconIndex]</span>
                                         </div>
                                         <div class="course-details">
                                             <h4>@course.CourseName</h4>
@@ -87,12 +96,33 @@
                                 {
                                     <p style="font-size: 14px; color: #6b7280; margin: 12px 0;">@course.Description</p>
                                 }
-                                <div class="progress-bar">
-                                    <div class="progress-fill blue" style="width: @progress%"></div>
+                                
+                                <!-- Thông tin tài liệu thay vì progress bar -->
+                                <div class="course-stats">
+                                    <div class="stat-item">
+                                        <span class="material-symbols-outlined stat-icon" style="color: #0959aa;">description</span>
+                                        <div class="stat-info">
+                                            <span class="stat-value">@documentCount</span>
+                                            <span class="stat-label">Tài liệu</span>
+                                        </div>
+                                    </div>
+                                    @if (newDocumentsCount > 0)
+                                    {
+                                        <div class="stat-item">
+                                            <span class="material-symbols-outlined stat-icon" style="color: #16a34a;">new_releases</span>
+                                            <div class="stat-info">
+                                                <span class="stat-value">@newDocumentsCount</span>
+                                                <span class="stat-label">Tài liệu mới</span>
+                                            </div>
+                                        </div>
+                                    }
                                 </div>
+                                
                                 <div class="course-footer">
-                                    <span>Hoàn thành @progress%</span>
-                                    <span>@documentCount tài liệu</span>
+                                    <a href="@Url.Action("Library", "Document", new { courseId = course.Id })" class="btn-view-documents">
+                                        <span class="material-symbols-outlined">folder_open</span>
+                                        Xem tài liệu
+                                    </a>
                                 </div>
                             </div>
                         }
@@ -152,6 +182,79 @@
     font-size: 14px;
     color: #6b7280;
     margin: 0;
+}
+
+/* Course Stats Styles */
+.course-stats {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.stat-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111418;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1;
+}
+
+.course-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-view-documents {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #0959aa;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-view-documents:hover {
+    background: #075985;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(9, 89, 170, 0.2);
+}
+
+.btn-view-documents .material-symbols-outlined {
+    font-size: 18px;
 }
 </style>
 

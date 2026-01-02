@@ -121,7 +121,18 @@
                                             }
                                         </td>
                                         <td>
-                                            <div class="approval-actions">
+                                            <div class="approval-actions" style="display: flex; gap: 8px; align-items: center;">
+                                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px;" 
+                                                        data-user-id="@user.Id"
+                                                        data-email="@user.Email"
+                                                        data-full-name="@user.FullName"
+                                                        data-role="@(roles != null && roles.Any() ? roles.First() : "")"
+                                                        data-student-code="@(user.StudentCode ?? "")"
+                                                        data-faculty="@(user.Faculty ?? "")"
+                                                        onclick="showEditUserModal(this)">
+                                                    <span class="material-symbols-outlined" style="font-size: 16px;">edit</span>
+                                                    Chỉnh sửa
+                                                </button>
                                                 <form method="post" action="@Url.Action("ToggleLock", "Admin")" style="display: inline;">
                                                     @Html.AntiForgeryToken()
                                                     <input type="hidden" name="userId" value="@user.Id" />
@@ -188,16 +199,79 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Mã sinh viên</label>
-                    <input type="text" name="studentCode" class="form-input" />
+                    <input type="text" name="studentCode" class="form-input" id="studentCodeInput" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Khoa</label>
                     <input type="text" name="faculty" class="form-input" />
                 </div>
+                <div class="form-group" id="classCodeGroup" style="display: none;">
+                    <label class="form-label">Mã lớp</label>
+                    <input type="text" name="classCode" class="form-input" placeholder="Ví dụ: IT001-L01" id="classCodeInput" />
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Chỉ dành cho sinh viên - Mã lớp học của sinh viên</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-secondary" onclick="closeCreateUserModal()">Hủy</button>
                 <button type="submit" class="btn-primary">Tạo người dùng</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Chỉnh sửa người dùng</h3>
+            <button type="button" class="modal-close" onclick="closeEditUserModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form method="post" action="@Url.Action("UpdateUser", "Admin")" id="editUserForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="userId" id="editUserId" />
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Email <span class="required">*</span></label>
+                    <input type="email" name="email" class="form-input" id="editEmail" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Họ tên <span class="required">*</span></label>
+                    <input type="text" name="fullName" class="form-input" id="editFullName" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vai trò <span class="required">*</span></label>
+                    <select name="role" class="form-select" id="editRole" required>
+                        <option value="">-- Chọn vai trò --</option>
+                        @if (ViewBag.Roles != null)
+                        {
+                            var roleList = ViewBag.Roles as List<Microsoft.AspNetCore.Identity.IdentityRole>;
+                            @if (roleList != null)
+                            {
+                                @foreach (var role in roleList)
+                                {
+                                    @if (role != null && role.Name != null)
+                                    {
+                                        <option value="@role.Name">@role.Name</option>
+                                    }
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mã sinh viên</label>
+                    <input type="text" name="studentCode" class="form-input" id="editStudentCode" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Khoa</label>
+                    <input type="text" name="faculty" class="form-input" id="editFaculty" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeEditUserModal()">Hủy</button>
+                <button type="submit" class="btn-primary">Cập nhật</button>
             </div>
         </form>
     </div>
@@ -231,6 +305,31 @@ function showCreateUserModal() {
 function closeCreateUserModal() {
     document.getElementById('createUserModal').style.display = 'none';
     document.getElementById('createUserForm').reset();
+    // Hide class code field
+    document.getElementById('classCodeGroup').style.display = 'none';
+}
+
+function showEditUserModal(button) {
+    const userId = button.getAttribute('data-user-id');
+    const email = button.getAttribute('data-email');
+    const fullName = button.getAttribute('data-full-name');
+    const role = button.getAttribute('data-role');
+    const studentCode = button.getAttribute('data-student-code');
+    const faculty = button.getAttribute('data-faculty');
+    
+    document.getElementById('editUserId').value = userId || '';
+    document.getElementById('editEmail').value = email || '';
+    document.getElementById('editFullName').value = fullName || '';
+    document.getElementById('editRole').value = role || '';
+    document.getElementById('editStudentCode').value = studentCode || '';
+    document.getElementById('editFaculty').value = faculty || '';
+    
+    document.getElementById('editUserModal').style.display = 'flex';
+}
+
+function closeEditUserModal() {
+    document.getElementById('editUserModal').style.display = 'none';
+    document.getElementById('editUserForm').reset();
 }
 
 function changeRole(userId, role) {
@@ -271,5 +370,12 @@ document.getElementById('createUserModal')?.addEventListener('click', function(e
         closeCreateUserModal();
     }
 });
+
+document.getElementById('editUserModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditUserModal();
+    }
+});
+
 </script>
 

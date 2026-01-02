@@ -31,25 +31,17 @@
             <span class="material-symbols-outlined">folder</span>
             <span>Tài liệu của tôi</span>
         </a>
-        <a href="@Url.Action("Upload", "Document")" class="nav-item @(currentAction == "Upload" ? "active" : "")">
-            <span class="material-symbols-outlined">cloud_upload</span>
-            <span>Tải lên tài liệu</span>
-        </a>
-        <a href="@Url.Action("Approval", "Document")" class="nav-item @(currentAction == "Approval" ? "active" : "")">
-            <span class="material-symbols-outlined">pending_actions</span>
-            <span>Phê duyệt</span>
-        </a>
-        <a href="@Url.Action("Index", "Folder")" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Folder" ? "active" : "")">
-            <span class="material-symbols-outlined">folder_managed</span>
-            <span>Quản lý thư mục</span>
+        <a href="@Url.Action("RecycleBin", "Document")" class="nav-item @(currentAction == "RecycleBin" ? "active" : "")">
+            <span class="material-symbols-outlined">delete</span>
+            <span>Thùng rác</span>
         </a>
         <a href="@Url.Action("Search", "Document")" class="nav-item @(currentAction == "Search" ? "active" : "")">
             <span class="material-symbols-outlined">search</span>
             <span>Tìm kiếm</span>
         </a>
-        <a href="#" class="nav-item">
-            <span class="material-symbols-outlined">settings</span>
-            <span>Cài đặt</span>
+        <a href="@Url.Action("Library", "Document")" class="nav-item @(currentAction == "Library" ? "active" : "")">
+            <span class="material-symbols-outlined">library_books</span>
+            <span>Thư viện tài liệu</span>
         </a>
     </nav>
 

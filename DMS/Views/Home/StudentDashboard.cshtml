@@ -6,6 +6,10 @@
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+}
+
 <div class="dashboard-header">
     <div class="header-left">
         <div class="logo-icon">
@@ -31,8 +35,12 @@
                 <div class="dropdown-header">
                     <div class="dropdown-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></div>
                     <div class="dropdown-user-info">
-                        <div class="dropdown-name">@UserManager.GetUserName(User)</div>
+                        <div class="dropdown-name">@(currentUser?.FullName ?? UserManager.GetUserName(User))</div>
                         <div class="dropdown-role">Sinh viên</div>
+                        @if (!string.IsNullOrEmpty(currentUser?.StudentCode))
+                        {
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">MSSV: @currentUser.StudentCode</div>
+                        }
                     </div>
                 </div>
                 <div class="dropdown-divider"></div>
@@ -52,11 +60,17 @@
     <div class="dashboard-title-section">
         <div>
             <h1 class="dashboard-title">Dashboard Sinh viên</h1>
-            <p class="dashboard-subtitle">Chào mừng trở lại! Xem tiến độ học tập và tài liệu mới nhất của bạn.</p>
+            <p class="dashboard-subtitle">Chào mừng trở lại! Quản lý và truy cập tài liệu học tập của bạn.</p>
         </div>
         <div class="action-buttons">
-            <button class="btn btn-outline">Xem Lịch</button>
-            <button class="btn btn-primary">Nộp Bài Tập</button>
+            <a href="@Url.Action("Library", "Document")" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined">folder</span>
+                Thư viện tài liệu
+            </a>
+            <a href="@Url.Action("Search", "Document")" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined">search</span>
+                Tìm kiếm
+            </a>
         </div>
     </div>
 
@@ -64,102 +78,86 @@
     <div class="kpi-grid">
         <div class="kpi-card orange-border">
             <div class="kpi-card-header">
-                <p class="kpi-label">Bài tập cần nộp</p>
-                <span class="material-symbols-outlined kpi-icon orange icon-fill">assignment_late</span>
+                <p class="kpi-label">Tài liệu mới</p>
+                <span class="material-symbols-outlined kpi-icon orange icon-fill">new_releases</span>
             </div>
-            <p class="kpi-value">3</p>
-            <p class="kpi-description">Sắp hết hạn trong 3 ngày tới</p>
+            <p class="kpi-value">@(ViewBag.NewDocumentsCount ?? 0)</p>
+            <p class="kpi-description">Trong 7 ngày qua</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
-                <p class="kpi-label">Thông báo mới</p>
-                <span class="material-symbols-outlined kpi-icon blue icon-fill">notifications_active</span>
+                <p class="kpi-label">Tài liệu đã tải</p>
+                <span class="material-symbols-outlined kpi-icon blue icon-fill">download</span>
             </div>
-            <p class="kpi-value">5</p>
-            <p class="kpi-description">Từ giảng viên & hệ thống</p>
+            <p class="kpi-value">@(ViewBag.DownloadedCount ?? 0)</p>
+            <p class="kpi-description">Tổng số tài liệu đã tải</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
-                <p class="kpi-label">Tín chỉ tích lũy</p>
-                <span class="material-symbols-outlined kpi-icon green">check_circle</span>
+                <p class="kpi-label">Thư mục đang theo dõi</p>
+                <span class="material-symbols-outlined kpi-icon green icon-fill">folder</span>
             </div>
-            <p class="kpi-value">85</p>
-            <p class="kpi-description">Tiến độ: 70% chương trình</p>
+            <p class="kpi-value">@(ViewBag.FollowingFoldersCount ?? 0)</p>
+            <p class="kpi-description">Thư mục có tài liệu mới</p>
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
-                <p class="kpi-label">Điểm trung bình (GPA)</p>
-                <span class="material-symbols-outlined kpi-icon">school</span>
+                <p class="kpi-label">Khóa học</p>
+                <span class="material-symbols-outlined kpi-icon purple icon-fill">book</span>
             </div>
-            <p class="kpi-value">3.62</p>
-            <p class="kpi-description">Học kỳ hiện tại</p>
+            <p class="kpi-value">@(ViewBag.CoursesCount ?? 0)</p>
+            <p class="kpi-description">Số khóa học đang tham gia</p>
         </div>
     </div>
 
     <!-- Courses Section -->
     <div class="courses-section">
-        <h3 class="section-title">Khóa học của tôi</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 class="section-title">Khóa học của tôi</h3>
+            <a href="@Url.Action("MyCourses", "Home")" style="color: #0959aa; text-decoration: none; font-size: 14px; font-weight: 500;">
+                Xem tất cả →
+            </a>
+        </div>
         <div class="courses-grid">
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon blue">
-                            <span class="material-symbols-outlined">code</span>
+            @if (ViewBag.Courses != null && ((List<DMS.Models.Course>)ViewBag.Courses).Any())
+            {
+                var colors = new[] { "blue", "purple", "green", "orange", "red" };
+                var icons = new[] { "book", "code", "language", "psychology", "science" };
+                var index = 0;
+                @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                {
+                    var colorIndex = index % colors.Length;
+                    var iconIndex = index % icons.Length;
+                    var docCount = course.Documents?.Count ?? 0;
+                    <div class="course-card">
+                        <div class="course-header">
+                            <div class="course-info">
+                                <div class="course-icon @colors[colorIndex]">
+                                    <span class="material-symbols-outlined">@icons[iconIndex]</span>
+                                </div>
+                                <div class="course-details">
+                                    <h4>@course.CourseName</h4>
+                                    <p>@course.CourseCode</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="course-details">
-                            <h4>Cấu trúc dữ liệu</h4>
-                            <p>CS101 - TS. Nguyễn Văn A</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill blue" style="width: 75%"></div>
-                </div>
-                <div class="course-footer">
-                    <span>Hoàn thành 75%</span>
-                    <span>Truy cập nhanh →</span>
-                </div>
-            </div>
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon purple">
-                            <span class="material-symbols-outlined">language</span>
-                        </div>
-                        <div class="course-details">
-                            <h4>Tiếng Anh Chuyên Ngành</h4>
-                            <p>ENG202 - Ms. Sarah</p>
+                        <div class="course-footer" style="margin-top: 12px;">
+                            <span>@docCount tài liệu</span>
+                            <a href="@Url.Action("Library", "Document", new { courseId = course.Id })" style="color: #0959aa; text-decoration: none;">
+                                Xem tài liệu →
+                            </a>
                         </div>
                     </div>
+                    index++;
+                }
+            }
+            else
+            {
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #9ca3af;">
+                    <span class="material-symbols-outlined" style="font-size: 48px; display: block; margin-bottom: 16px;">book_off</span>
+                    <p>Chưa có khóa học nào. Vui lòng liên hệ quản trị viên để được thêm vào khóa học.</p>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill purple" style="width: 45%"></div>
-                </div>
-                <div class="course-footer">
-                    <span>Hoàn thành 45%</span>
-                    <span>Truy cập nhanh →</span>
-                </div>
-            </div>
-            <div class="course-card">
-                <div class="course-header">
-                    <div class="course-info">
-                        <div class="course-icon green">
-                            <span class="material-symbols-outlined">psychology</span>
-                        </div>
-                        <div class="course-details">
-                            <h4>Triết học Mác-Lênin</h4>
-                            <p>PHI101 - PGS. Trần Thị B</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill green" style="width: 90%"></div>
-                </div>
-                <div class="course-footer">
-                    <span>Hoàn thành 90%</span>
-                    <span>Truy cập nhanh →</span>
-                </div>
-            </div>
+            }
         </div>
     </div>
 
@@ -212,193 +210,98 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td style="text-align: center;">
-                        <span class="material-symbols-outlined icon-fill" style="color: #fb923c; font-size: 20px;">star</span>
-                    </td>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon orange">
-                                <span class="material-symbols-outlined">assignment</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Bài tập lớn: Phân tích AI</h5>
-                                <p>Môn: Trí tuệ nhân tạo</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="instructor-info">
-                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=TS.+Trần+Hùng&background=1e40af&color=fff')"></div>
-                            <div class="instructor-details">
-                                <h6>TS. Trần Hùng</h6>
-                                <span>Khoa CNTT</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color: #60758a; font-size: 14px;">24 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge orange">
-                            <span class="status-dot orange"></span>
-                            Sắp hết hạn
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <button class="action-btn" title="Xem chi tiết">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn download" title="Nộp bài">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">upload_file</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
-                    </td>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon blue">
-                                <span class="material-symbols-outlined">picture_as_pdf</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Slide bài giảng: Chương 3</h5>
-                                <p>Môn: Hóa đại cương</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="instructor-info">
-                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=ThS.+Lê+Thị+Lan&background=7c3aed&color=fff')"></div>
-                            <div class="instructor-details">
-                                <h6>ThS. Lê Thị Lan</h6>
-                                <span>Khoa Hóa</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color: #60758a; font-size: 14px;">23 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge blue">
-                            <span class="status-dot blue"></span>
-                            Tài liệu mới
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <button class="action-btn" title="Xem trước">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn download" title="Tải xuống">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
-                    </td>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon gray">
-                                <span class="material-symbols-outlined">article</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Đề cương: Quy hoạch Đô thị</h5>
-                                <p>Môn: Kiến trúc</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="instructor-info">
-                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=PGS.+Hoàng+Minh&background=16a34a&color=fff')"></div>
-                            <div class="instructor-details">
-                                <h6>PGS. Hoàng Minh</h6>
-                                <span>Khoa Kiến trúc</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color: #60758a; font-size: 14px;">22 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge gray">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
-                            Đã xem
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <button class="action-btn" title="Xem lại">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn download" title="Tải xuống">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="text-align: center;">
-                        <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
-                    </td>
-                    <td>
-                        <div class="document-info">
-                            <div class="document-icon gray">
-                                <span class="material-symbols-outlined">description</span>
-                            </div>
-                            <div class="document-details">
-                                <h5>Dự án cuối kỳ: Năng lượng sạch</h5>
-                                <p>Môn: Khoa học Môi trường</p>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="instructor-info">
-                            <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=TS.+Phạm+Tuấn&background=ea580c&color=fff')"></div>
-                            <div class="instructor-details">
-                                <h6>TS. Phạm Tuấn</h6>
-                                <span>Khoa Môi trường</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color: #60758a; font-size: 14px;">21 Th10, 2023</td>
-                    <td>
-                        <span class="status-badge gray">
-                            <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
-                            Đã xem
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons-group">
-                            <button class="action-btn" title="Xem lại">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
-                            </button>
-                            <button class="action-btn download" title="Tải xuống">
-                                <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+                @if (ViewBag.Documents != null && ((List<DMS.Models.Document>)ViewBag.Documents).Any())
+                {
+                    @foreach (var doc in (List<DMS.Models.Document>)ViewBag.Documents)
+                    {
+                        var isNew = doc.UploadDate >= DateTime.Now.AddDays(-7);
+                        var fileIcon = doc.FileName.ToLower().EndsWith(".pdf") ? "picture_as_pdf" :
+                                      doc.FileName.ToLower().EndsWith(".doc") || doc.FileName.ToLower().EndsWith(".docx") ? "description" :
+                                      doc.FileName.ToLower().EndsWith(".ppt") || doc.FileName.ToLower().EndsWith(".pptx") ? "slideshow" :
+                                      doc.FileName.ToLower().EndsWith(".xls") || doc.FileName.ToLower().EndsWith(".xlsx") ? "table_chart" :
+                                      "insert_drive_file";
+                        var iconColor = doc.FileName.ToLower().EndsWith(".pdf") ? "orange" :
+                                       doc.FileName.ToLower().EndsWith(".doc") || doc.FileName.ToLower().EndsWith(".docx") ? "blue" :
+                                       doc.FileName.ToLower().EndsWith(".ppt") || doc.FileName.ToLower().EndsWith(".pptx") ? "red" :
+                                       doc.FileName.ToLower().EndsWith(".xls") || doc.FileName.ToLower().EndsWith(".xlsx") ? "green" :
+                                       "gray";
+                        <tr>
+                            <td style="text-align: center;">
+                                <span class="material-symbols-outlined" style="color: #d1d5db; font-size: 20px;">star_border</span>
+                            </td>
+                            <td>
+                                <div class="document-info">
+                                    <div class="document-icon @iconColor">
+                                        <span class="material-symbols-outlined">@fileIcon</span>
+                                    </div>
+                                    <div class="document-details">
+                                        <h5>@doc.Title</h5>
+                                        <p>Môn: @(doc.Course?.CourseName ?? "N/A")</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="instructor-info">
+                                    <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@(doc.User?.FullName ?? "User")&background=1e40af&color=fff')"></div>
+                                    <div class="instructor-details">
+                                        <h6>@(doc.User?.FullName ?? "N/A")</h6>
+                                        <span>@(doc.User?.Faculty ?? "N/A")</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="color: #60758a; font-size: 14px;">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</td>
+                            <td>
+                                @if (isNew)
+                                {
+                                    <span class="status-badge blue">
+                                        <span class="status-dot blue"></span>
+                                        Tài liệu mới
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge gray">
+                                        <span class="material-symbols-outlined" style="font-size: 14px;">history</span>
+                                        Đã xem
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <div class="action-buttons-group">
+                                    <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem trước">
+                                        <span class="material-symbols-outlined" style="font-size: 20px;">visibility</span>
+                                    </a>
+                                    <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn download" title="Tải xuống">
+                                        <span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #9ca3af;">
+                            <span class="material-symbols-outlined" style="font-size: 48px; display: block; margin-bottom: 16px;">folder_off</span>
+                            <p>Chưa có tài liệu nào. Hãy truy cập <a href="@Url.Action("Library", "Document")" style="color: #0959aa;">Thư viện tài liệu</a> để xem các tài liệu có sẵn.</p>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
-        <div class="pagination-wrapper">
-            <div class="pagination-info">
-                Hiển thị <strong>1</strong> đến <strong>4</strong> trong số <strong>24</strong> tài liệu
+        @if (ViewBag.Documents != null && ((List<DMS.Models.Document>)ViewBag.Documents).Any())
+        {
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    Hiển thị <strong>@(((List<DMS.Models.Document>)ViewBag.Documents).Count)</strong> tài liệu gần đây
+                </div>
+                <a href="@Url.Action("Library", "Document")" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;">
+                    <span>Xem tất cả tài liệu</span>
+                    <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+                </a>
             </div>
-            <div class="pagination">
-                <button class="pagination-btn">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
-                </button>
-                <button class="pagination-btn active">1</button>
-                <button class="pagination-btn">2</button>
-                <button class="pagination-btn">3</button>
-                <button class="pagination-btn">...</button>
-                <button class="pagination-btn">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
-                </button>
-            </div>
-        </div>
+        }
     </div>
 </main>
 

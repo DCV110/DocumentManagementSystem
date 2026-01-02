@@ -76,9 +76,10 @@ namespace DMS.Data
 
                 // Tạo User Sinh viên
                 string studentEmail = "student@dms.com";
+                ApplicationUser? studentUser = null;
                 if (await userManager.FindByEmailAsync(studentEmail) == null)
                 {
-                    var studentUser = new ApplicationUser
+                    studentUser = new ApplicationUser
                     {
                         UserName = studentEmail,
                         Email = studentEmail,
@@ -94,6 +95,65 @@ namespace DMS.Data
                         await userManager.AddToRoleAsync(studentUser, "Student");
                     }
                 }
+                else
+                {
+                    studentUser = await userManager.FindByEmailAsync(studentEmail);
+                }
+
+                // Tạo thêm Giảng viên và Sinh viên mẫu
+                var instructor2Email = "instructor2@dms.com";
+                ApplicationUser? instructor2 = null;
+                if (await userManager.FindByEmailAsync(instructor2Email) == null)
+                {
+                    instructor2 = new ApplicationUser
+                    {
+                        UserName = instructor2Email,
+                        Email = instructor2Email,
+                        FullName = "ThS. Lê Thị Lan",
+                        Faculty = "Khoa Hóa",
+                        EmailConfirmed = true
+                    };
+                    var result = await userManager.CreateAsync(instructor2, "Instructor@123");
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(instructor2, "Instructor");
+                    }
+                }
+                else
+                {
+                    instructor2 = await userManager.FindByEmailAsync(instructor2Email);
+                }
+
+                var instructor3Email = "instructor3@dms.com";
+                ApplicationUser? instructor3 = null;
+                if (await userManager.FindByEmailAsync(instructor3Email) == null)
+                {
+                    instructor3 = new ApplicationUser
+                    {
+                        UserName = instructor3Email,
+                        Email = instructor3Email,
+                        FullName = "TS. Trần Hùng",
+                        Faculty = "Khoa CNTT",
+                        EmailConfirmed = true
+                    };
+                    var result = await userManager.CreateAsync(instructor3, "Instructor@123");
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(instructor3, "Instructor");
+                    }
+                }
+                else
+                {
+                    instructor3 = await userManager.FindByEmailAsync(instructor3Email);
+                }
+
+                await context.SaveChangesAsync();
+
+                // 3. Tạo Folders mẫu - Đã xóa, không tạo folders mẫu
+                // Người dùng sẽ tự tạo folders khi cần
+
+                // 4. Tạo Documents mẫu - Đã xóa, không tạo documents mẫu
+                // Người dùng sẽ tự tải documents khi cần
             }
         }
     }

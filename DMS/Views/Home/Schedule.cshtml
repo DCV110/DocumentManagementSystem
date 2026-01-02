@@ -51,94 +51,156 @@
 <main class="dashboard-main">
     <div class="dashboard-title-section">
         <div>
-            <h1 class="dashboard-title">Lịch biểu học tập</h1>
-            <p class="dashboard-subtitle">Xem lịch học và các sự kiện quan trọng</p>
+            <h1 class="dashboard-title">Hoạt động tài liệu</h1>
+            <p class="dashboard-subtitle">Xem tài liệu mới được upload theo thời gian</p>
         </div>
     </div>
 
-    <!-- Schedule Calendar -->
-    <div class="schedule-container">
-        <div class="schedule-calendar">
-            <div class="calendar-header">
-                <button class="calendar-nav-btn">
-                    <span class="material-symbols-outlined">chevron_left</span>
-                </button>
-                <h3>Tháng 12, 2025</h3>
-                <button class="calendar-nav-btn">
-                    <span class="material-symbols-outlined">chevron_right</span>
-                </button>
+    <!-- Documents Activity Timeline -->
+    <div class="activity-container">
+        <!-- Recent Documents -->
+        <div class="recent-documents-section">
+            <div class="section-header">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin: 0;">Tài liệu mới gần đây</h3>
+                <a href="@Url.Action("Library", "Document")" class="view-all-link">
+                    Xem tất cả
+                    <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+                </a>
             </div>
-            <div class="calendar-grid">
-                <div class="calendar-day-header">CN</div>
-                <div class="calendar-day-header">T2</div>
-                <div class="calendar-day-header">T3</div>
-                <div class="calendar-day-header">T4</div>
-                <div class="calendar-day-header">T5</div>
-                <div class="calendar-day-header">T6</div>
-                <div class="calendar-day-header">T7</div>
-                
-                @for (int i = 1; i <= 31; i++)
-                {
-                    var hasEvent = i % 7 == 0 || i % 5 == 0; // Tạm thời random
-                    <div class="calendar-day @(hasEvent ? "has-event" : "")">
-                        <span class="day-number">@i</span>
-                        @if (hasEvent)
-                        {
-                            <div class="event-dot"></div>
-                        }
-                    </div>
-                }
-            </div>
+
+            @if (ViewBag.RecentDocuments != null && ((List<DMS.Models.Document>)ViewBag.RecentDocuments).Any())
+            {
+                var recentDocuments = (List<DMS.Models.Document>)ViewBag.RecentDocuments;
+                <div class="documents-timeline">
+                    @foreach (var doc in recentDocuments)
+                    {
+                        var isToday = doc.UploadDate.Date == DateTime.Now.Date;
+                        var isYesterday = doc.UploadDate.Date == DateTime.Now.AddDays(-1).Date;
+                        var isThisWeek = doc.UploadDate.Date >= DateTime.Now.AddDays(-7).Date;
+                        
+                        string timeLabel = "";
+                        if (isToday)
+                            timeLabel = "Hôm nay";
+                        else if (isYesterday)
+                            timeLabel = "Hôm qua";
+                        else if (isThisWeek)
+                            timeLabel = doc.UploadDate.ToString("dddd", new System.Globalization.CultureInfo("vi-VN"));
+                        else
+                            timeLabel = doc.UploadDate.ToString("dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"));
+
+                        var fileIcon = doc.FileName.ToLower().EndsWith(".pdf") ? "picture_as_pdf" :
+                                      doc.FileName.ToLower().EndsWith(".doc") || doc.FileName.ToLower().EndsWith(".docx") ? "description" :
+                                      doc.FileName.ToLower().EndsWith(".ppt") || doc.FileName.ToLower().EndsWith(".pptx") ? "slideshow" :
+                                      doc.FileName.ToLower().EndsWith(".xls") || doc.FileName.ToLower().EndsWith(".xlsx") ? "table_chart" :
+                                      "insert_drive_file";
+                        
+                        var iconColor = doc.FileName.ToLower().EndsWith(".pdf") ? "#dc2626" :
+                                       doc.FileName.ToLower().EndsWith(".doc") || doc.FileName.ToLower().EndsWith(".docx") ? "#2563eb" :
+                                       doc.FileName.ToLower().EndsWith(".ppt") || doc.FileName.ToLower().EndsWith(".pptx") ? "#ea580c" :
+                                       doc.FileName.ToLower().EndsWith(".xls") || doc.FileName.ToLower().EndsWith(".xlsx") ? "#16a34a" :
+                                       "#6b7280";
+
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <div class="document-activity-card">
+                                    <div class="document-icon-small" style="background-color: @(iconColor + "20");">
+                                        <span class="material-symbols-outlined" style="color: @iconColor; font-size: 24px;">@fileIcon</span>
+                                    </div>
+                                    <div class="document-activity-info">
+                                        <h4>@doc.Title</h4>
+                                        <div class="document-meta">
+                                            <span class="meta-item">
+                                                <span class="material-symbols-outlined" style="font-size: 16px;">school</span>
+                                                @(doc.Course?.CourseName ?? "N/A")
+                                            </span>
+                                            <span class="meta-item">
+                                                <span class="material-symbols-outlined" style="font-size: 16px;">person</span>
+                                                @(doc.User?.FullName ?? "N/A")
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="document-activity-time">
+                                        <span class="time-label">@timeLabel</span>
+                                        <span class="time-detail">@doc.UploadDate.ToString("HH:mm")</span>
+                                    </div>
+                                    <div class="document-activity-actions">
+                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-icon-btn" title="Xem">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </a>
+                                        <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-icon-btn" title="Tải xuống">
+                                            <span class="material-symbols-outlined">download</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">description</span>
+                    <h3>Chưa có tài liệu nào</h3>
+                    <p>Chưa có tài liệu mới được upload. Hãy quay lại sau!</p>
+                </div>
+            }
         </div>
 
-        <!-- Upcoming Events -->
-        <div class="schedule-events">
-            <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Sự kiện sắp tới</h3>
-            <div class="events-list">
-                <div class="event-item">
-                    <div class="event-date">
-                        <span class="event-day">28</span>
-                        <span class="event-month">Th12</span>
-                    </div>
-                    <div class="event-content">
-                        <h4>Kiểm tra giữa kỳ - Cấu trúc dữ liệu</h4>
-                        <p>08:00 - 10:00 • Phòng A101</p>
-                    </div>
+        <!-- Statistics Sidebar -->
+        <div class="activity-stats">
+            <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Thống kê</h3>
+            <div class="stats-card">
+                <div class="stat-row">
+                    <span class="stat-label">Tuần này</span>
+                    <span class="stat-value">@(ViewBag.DocumentsThisWeek ?? 0)</span>
                 </div>
-                <div class="event-item">
-                    <div class="event-date">
-                        <span class="event-day">30</span>
-                        <span class="event-month">Th12</span>
-                    </div>
-                    <div class="event-content">
-                        <h4>Nộp bài tập lớn - Trí tuệ nhân tạo</h4>
-                        <p>23:59 • Online</p>
-                    </div>
+                <div class="stat-row">
+                    <span class="stat-label">Tháng này</span>
+                    <span class="stat-value">@(ViewBag.DocumentsThisMonth ?? 0)</span>
                 </div>
-                <div class="event-item">
-                    <div class="event-date">
-                        <span class="event-day">02</span>
-                        <span class="event-month">Th1</span>
-                    </div>
-                    <div class="event-content">
-                        <h4>Thi cuối kỳ - Tiếng Anh Chuyên Ngành</h4>
-                        <p>14:00 - 16:00 • Phòng B205</p>
-                    </div>
+                <div class="stat-row">
+                    <span class="stat-label">Tổng cộng</span>
+                    <span class="stat-value">@(ViewBag.TotalDocuments ?? 0)</span>
                 </div>
+            </div>
+
+            <!-- Documents by Course -->
+            <div class="stats-by-course">
+                <h4 style="font-size: 14px; font-weight: 600; color: #111418; margin: 16px 0 12px 0;">Theo khóa học</h4>
+                @if (ViewBag.DocumentsByCourse != null)
+                {
+                    var documentsByCourse = ViewBag.DocumentsByCourse as Dictionary<string, int>;
+                    @if (documentsByCourse != null && documentsByCourse.Any())
+                    {
+                        @foreach (var item in documentsByCourse)
+                        {
+                            <div class="course-stat-item">
+                                <span class="course-name">@item.Key</span>
+                                <span class="course-count">@item.Value</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="font-size: 14px; color: #9ca3af; text-align: center; padding: 16px;">Chưa có dữ liệu</p>
+                    }
+                }
             </div>
         </div>
     </div>
 </main>
 
 <style>
-.schedule-container {
+.activity-container {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 24px;
     margin-top: 32px;
 }
 
-.schedule-calendar {
+.recent-documents-section {
     background: white;
     border-radius: 12px;
     padding: 24px;
@@ -146,160 +208,277 @@
     border: 1px solid #e5e7eb;
 }
 
-.calendar-header {
+.section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
 }
 
-.calendar-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #111418;
-    margin: 0;
-}
-
-.calendar-nav-btn {
-    background: #f3f4f6;
-    border: none;
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
-    display: flex;
+.view-all-link {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    gap: 4px;
+    color: #0959aa;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
     transition: all 0.2s;
 }
 
-.calendar-nav-btn:hover {
-    background: #e5e7eb;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
+.view-all-link:hover {
+    color: #075985;
     gap: 8px;
 }
 
-.calendar-day-header {
-    text-align: center;
-    font-size: 14px;
-    font-weight: 600;
-    color: #6b7280;
-    padding: 8px;
-}
-
-.calendar-day {
-    aspect-ratio: 1;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+.documents-timeline {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    gap: 16px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 16px;
     position: relative;
-    cursor: pointer;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 48px;
+    bottom: -16px;
+    width: 2px;
+    background: #e5e7eb;
+}
+
+.timeline-marker {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0959aa;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #0959aa;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.document-activity-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     transition: all 0.2s;
 }
 
-.calendar-day:hover {
-    background: #f9fafb;
-    border-color: #16a34a;
+.document-activity-card:hover {
+    background: white;
+    border-color: #0959aa;
+    box-shadow: 0 2px 4px rgba(9, 89, 170, 0.1);
 }
 
-.calendar-day.has-event {
-    border-color: #16a34a;
-    background: #f0fdf4;
+.document-icon-small {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.day-number {
-    font-size: 14px;
-    font-weight: 500;
+.document-activity-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.document-activity-info h4 {
+    font-size: 15px;
+    font-weight: 600;
     color: #111418;
+    margin: 0 0 8px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.event-dot {
-    width: 6px;
-    height: 6px;
-    background: #16a34a;
-    border-radius: 50%;
-    position: absolute;
-    bottom: 4px;
+.document-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
-.schedule-events {
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.document-activity-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.time-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0959aa;
+}
+
+.time-detail {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.document-activity-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.action-icon-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.action-icon-btn:hover {
+    background: #0959aa;
+    border-color: #0959aa;
+    color: white;
+}
+
+.action-icon-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.activity-stats {
     background: white;
     border-radius: 12px;
     padding: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     border: 1px solid #e5e7eb;
+    height: fit-content;
 }
 
-.events-list {
+.stats-card {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
-.event-item {
+.stat-row {
     display: flex;
-    gap: 16px;
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.stat-row:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0959aa;
+}
+
+.stats-by-course {
+    margin-top: 24px;
+}
+
+.course-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    margin-bottom: 8px;
     transition: all 0.2s;
 }
 
-.event-item:hover {
-    border-color: #16a34a;
-    background: #f9fafb;
-}
-
-.event-date {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 60px;
-    padding: 12px;
+.course-stat-item:hover {
     background: #f3f4f6;
-    border-radius: 8px;
 }
 
-.event-day {
-    font-size: 24px;
-    font-weight: 700;
+.course-name {
+    font-size: 14px;
     color: #111418;
-    line-height: 1;
-}
-
-.event-month {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 4px;
-}
-
-.event-content {
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.event-content h4 {
-    font-size: 16px;
+.course-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0959aa;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 64px 24px;
+}
+
+.empty-state h3 {
+    font-size: 20px;
     font-weight: 600;
     color: #111418;
-    margin: 0 0 4px 0;
+    margin: 16px 0 8px 0;
 }
 
-.event-content p {
+.empty-state p {
     font-size: 14px;
     color: #6b7280;
     margin: 0;
 }
 
 @@media (max-width: 1024px) {
-    .schedule-container {
+    .activity-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+
+@@media (max-width: 1024px) {
+    .activity-container {
         grid-template-columns: 1fr;
     }
 }

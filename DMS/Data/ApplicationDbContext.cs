@@ -14,8 +14,8 @@ namespace DMS.Data
 
         public DbSet<Document> Documents { get; set; }
         public DbSet<Course> Courses { get; set; }
-        public DbSet<Classroom> Classrooms { get; set; }
         public DbSet<Folder> Folders { get; set; }
+        public DbSet<StudentCourse> StudentCourses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

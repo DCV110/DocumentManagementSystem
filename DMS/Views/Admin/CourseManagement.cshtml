@@ -1,0 +1,636 @@
+@{
+    ViewData["Title"] = "Quản lý khóa học";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<partial name="_AdminSidebar" />
+
+@* Hidden token for JavaScript *@
+@Html.AntiForgeryToken()
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Quản lý khóa học</h1>
+            <p>Quản lý môn học, gán giảng viên và mã lớp</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-primary" onclick="showCreateCourseModal()" style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined">add</span>
+                Tạo khóa học mới
+            </button>
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>@TempData["SuccessMessage"]</span>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error">
+                <span class="material-symbols-outlined">error</span>
+                <span>@TempData["ErrorMessage"]</span>
+            </div>
+        }
+
+        <!-- Courses Table -->
+        <div class="documents-table-container">
+            <table class="documents-table-modern">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Mã môn học</th>
+                        <th>Tên môn học</th>
+                        <th style="width: 100px;">Mã lớp</th>
+                        <th style="width: 200px;">Giảng viên</th>
+                        <th>Mô tả</th>
+                        <th style="width: 120px; text-align: center;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (ViewBag.Courses != null && ((List<DMS.Models.Course>)ViewBag.Courses).Any())
+                    {
+                        @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="course-code-badge">@course.CourseCode</div>
+                                </td>
+                                <td>
+                                    <div class="document-item-info">
+                                        <h5>@course.CourseName</h5>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(course.ClassCode))
+                                    {
+                                        <span class="class-code-badge">@course.ClassCode</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color: #9ca3af; font-size: 13px;">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (course.Instructor != null)
+                                    {
+                                        <div class="instructor-info">
+                                            <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@course.Instructor.FullName&background=3b82f6&color=fff')"></div>
+                                            <div class="instructor-details">
+                                                <h6>@course.Instructor.FullName</h6>
+                                                <span>@course.Instructor.Email</span>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge-modern gray">
+                                            <span class="status-dot-modern gray"></span>
+                                            Chưa gán
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <span style="color: #6b7280; font-size: 13px;">@(course.Description ?? "-")</span>
+                                </td>
+                                <td>
+                                    <div class="approval-actions" style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+                                        <a href="@Url.Action("ManageEnrollment", "Admin", new { courseId = course.Id })" 
+                                           class="action-btn-small" 
+                                           style="background: #0959aa; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; border: none;"
+                                           title="Quản lý sinh viên">
+                                            <span class="material-symbols-outlined" style="font-size: 16px;">group</span>
+                                            Sinh viên
+                                        </a>
+                                        <button class="action-btn-small edit-course-btn" 
+                                                title="Sửa"
+                                                data-id="@course.Id"
+                                                data-code="@course.CourseCode"
+                                                data-name="@course.CourseName"
+                                                data-class="@(course.ClassCode ?? "")"
+                                                data-description="@(course.Description ?? "")"
+                                                data-instructor="@(course.InstructorId ?? "")">
+                                            <span class="material-symbols-outlined">edit</span>
+                                        </button>
+                                        <form method="post" action="@Url.Action("DeleteCourse", "Admin")" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khóa học này?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@course.Id" />
+                                            <button type="submit" class="action-btn-small delete-btn" title="Xóa">
+                                                <span class="material-symbols-outlined">delete</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <span class="material-symbols-outlined empty-icon">school</span>
+                                    <h3>Chưa có khóa học nào</h3>
+                                    <p>Bắt đầu bằng cách tạo khóa học mới</p>
+                                    <button class="btn-primary" onclick="showCreateCourseModal()" style="margin-top: 16px;">
+                                        <span class="material-symbols-outlined">add</span>
+                                        Tạo khóa học đầu tiên
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Course Modal -->
+<div id="createCourseModal" class="modal">
+    <div class="modal-content modal-animate">
+        <div class="modal-header">
+            <div class="modal-header-content">
+                <span class="material-symbols-outlined modal-icon">add_circle</span>
+                <h2>Tạo khóa học mới</h2>
+            </div>
+            <span class="close-button" onclick="closeCreateCourseModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="@Url.Action("CreateCourse", "Admin")" id="createCourseForm">
+                @Html.AntiForgeryToken()
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">menu_book</span>
+                        Tên môn học <span class="required">*</span>
+                    </label>
+                    <input type="text" name="courseName" required class="form-input-modal" placeholder="Ví dụ: Lập trình C# cơ bản" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">tag</span>
+                        Mã môn học <span class="required">*</span>
+                    </label>
+                    <input type="text" name="courseCode" required class="form-input-modal" placeholder="Ví dụ: IT001" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">class</span>
+                        Mã lớp
+                    </label>
+                    <input type="text" name="classCode" class="form-input-modal" placeholder="Ví dụ: L01" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">person</span>
+                        Giảng viên phụ trách
+                    </label>
+                    <select name="instructorId" class="form-select-modal">
+                        <option value="">-- Chọn giảng viên --</option>
+                        @if (ViewBag.Instructors != null)
+                        {
+                            @foreach (var instructor in (List<ApplicationUser>)ViewBag.Instructors)
+                            {
+                                <option value="@instructor.Id">@instructor.FullName (@instructor.Email)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">description</span>
+                        Mô tả
+                    </label>
+                    <textarea name="description" class="form-input-modal" rows="3" placeholder="Mô tả về môn học"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel-modal" onclick="closeCreateCourseModal()">
+                        <span class="material-symbols-outlined">close</span>
+                        Hủy
+                    </button>
+                    <button type="submit" class="btn-submit-modal">
+                        <span class="material-symbols-outlined">check</span>
+                        Tạo khóa học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div id="editCourseModal" class="modal">
+    <div class="modal-content modal-animate">
+        <div class="modal-header">
+            <div class="modal-header-content">
+                <span class="material-symbols-outlined modal-icon">edit</span>
+                <h2>Sửa khóa học</h2>
+            </div>
+            <span class="close-button" onclick="closeEditCourseModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="@Url.Action("UpdateCourse", "Admin")" id="editCourseForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="editCourseId" />
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">menu_book</span>
+                        Tên môn học <span class="required">*</span>
+                    </label>
+                    <input type="text" name="courseName" id="editCourseName" required class="form-input-modal" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">tag</span>
+                        Mã môn học <span class="required">*</span>
+                    </label>
+                    <input type="text" name="courseCode" id="editCourseCode" required class="form-input-modal" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">class</span>
+                        Mã lớp
+                    </label>
+                    <input type="text" name="classCode" id="editClassCode" class="form-input-modal" />
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">person</span>
+                        Giảng viên phụ trách
+                    </label>
+                    <select name="instructorId" id="editInstructorId" class="form-select-modal">
+                        <option value="">-- Chọn giảng viên --</option>
+                        @if (ViewBag.Instructors != null)
+                        {
+                            @foreach (var instructor in (List<ApplicationUser>)ViewBag.Instructors)
+                            {
+                                <option value="@instructor.Id">@instructor.FullName (@instructor.Email)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group-modal">
+                    <label class="form-label-modal">
+                        <span class="material-symbols-outlined label-icon">description</span>
+                        Mô tả
+                    </label>
+                    <textarea name="description" id="editDescription" class="form-input-modal" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel-modal" onclick="closeEditCourseModal()">
+                        <span class="material-symbols-outlined">close</span>
+                        Hủy
+                    </button>
+                    <button type="submit" class="btn-submit-modal">
+                        <span class="material-symbols-outlined">save</span>
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Alert Messages */
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .alert-success {
+        background: #dcfce7;
+        color: #16a34a;
+        border: 1px solid #86efac;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+    .alert .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    /* Course Code Badge */
+    .course-code-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        background: #eff6ff;
+        color: #1e40af;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    /* Class Code Badge */
+    .class-code-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        background: #f3e8ff;
+        color: #9333ea;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    /* Profile Avatar Small */
+    .profile-avatar-small {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+    }
+
+    /* Action Buttons */
+    .approval-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .action-btn-small {
+        background: white;
+        border: 1px solid #e5e7eb;
+        color: #6b7280;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .action-btn-small:hover {
+        background: #f9fafb;
+        border-color: #d1d5db;
+        color: #111418;
+    }
+
+    .action-btn-small.delete-btn:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #dc2626;
+    }
+
+    .action-btn-small .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-icon {
+        font-size: 64px;
+        color: #d1d5db;
+        margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111418;
+        margin: 0 0 8px 0;
+    }
+
+    .empty-state p {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Modal Enhancements */
+    .modal-animate {
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @@keyframes modalSlideIn {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @@keyframes slideDown {
+        from {
+            transform: translateY(-10px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .modal-icon {
+        font-size: 24px;
+        color: #3b82f6;
+    }
+
+    .form-group-modal {
+        margin-bottom: 24px;
+    }
+
+    .form-label-modal {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #111418;
+        margin-bottom: 10px;
+    }
+
+    .label-icon {
+        font-size: 18px;
+        color: #6b7280;
+    }
+
+    .form-input-modal,
+    .form-select-modal {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #111418;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-input-modal:focus,
+    .form-select-modal:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-select-modal {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 40px;
+        appearance: none;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 8px;
+    }
+
+    .btn-cancel-modal,
+    .btn-submit-modal {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-cancel-modal {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .btn-cancel-modal:hover {
+        background: #e5e7eb;
+        color: #111418;
+    }
+
+    .btn-submit-modal {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-submit-modal:hover {
+        background: #2563eb;
+    }
+
+    .btn-submit-modal .material-symbols-outlined,
+    .btn-cancel-modal .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    .required {
+        color: #dc2626;
+    }
+</style>
+
+<script>
+    function showCreateCourseModal() {
+        document.getElementById('createCourseModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCreateCourseModal() {
+        document.getElementById('createCourseModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        document.getElementById('createCourseForm').reset();
+    }
+
+    function showEditCourseModal(id, courseCode, courseName, classCode, description, instructorId) {
+        document.getElementById('editCourseId').value = id || '';
+        document.getElementById('editCourseCode').value = courseCode || '';
+        document.getElementById('editCourseName').value = courseName || '';
+        document.getElementById('editClassCode').value = classCode || '';
+        document.getElementById('editDescription').value = description || '';
+        document.getElementById('editInstructorId').value = instructorId || '';
+        document.getElementById('editCourseModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Handle edit button clicks using data attributes
+    document.addEventListener('DOMContentLoaded', function() {
+        var editButtons = document.querySelectorAll('.edit-course-btn');
+        editButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                var id = this.getAttribute('data-id');
+                var code = this.getAttribute('data-code') || '';
+                var name = this.getAttribute('data-name') || '';
+                var classCode = this.getAttribute('data-class') || '';
+                var description = this.getAttribute('data-description') || '';
+                var instructorId = this.getAttribute('data-instructor') || '';
+                showEditCourseModal(id, code, name, classCode, description, instructorId);
+            });
+        });
+    });
+
+    function closeEditCourseModal() {
+        document.getElementById('editCourseModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        var createModal = document.getElementById('createCourseModal');
+        var editModal = document.getElementById('editCourseModal');
+        if (event.target == createModal) {
+            closeCreateCourseModal();
+        }
+        if (event.target == editModal) {
+            closeEditCourseModal();
+        }
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeCreateCourseModal();
+            closeEditCourseModal();
+        }
+    });
+</script>
+

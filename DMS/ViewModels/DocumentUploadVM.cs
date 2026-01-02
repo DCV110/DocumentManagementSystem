@@ -11,9 +11,8 @@ namespace DMS.ViewModels
         [Display(Name = "Mô tả")]
         public string? Description { get; set; }
 
-        [Required(ErrorMessage = "Vui lòng chọn môn học")]
         [Display(Name = "Môn học")]
-        public int CourseId { get; set; }
+        public int? CourseId { get; set; }
 
         [Display(Name = "Thư mục")]
         public int? FolderId { get; set; }

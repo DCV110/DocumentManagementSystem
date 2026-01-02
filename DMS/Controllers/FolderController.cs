@@ -2,43 +2,36 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DMS.Data;
 using DMS.Models;
+using DMS.Services.Interfaces;
 
 namespace DMS.Controllers
 {
     [Authorize(Roles = "Admin,Instructor")]
     public class FolderController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IFolderService _folderService;
+        private readonly ICourseService _courseService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public FolderController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public FolderController(IFolderService folderService, ICourseService courseService, UserManager<ApplicationUser> userManager)
         {
-            _context = context;
+            _folderService = folderService;
+            _courseService = courseService;
             _userManager = userManager;
         }
 
-        // GET: Folder
-        public async Task<IActionResult> Index()
+        // GET: Folder - Redirect to MyDocuments (this page is no longer used)
+        public IActionResult Index()
         {
-            var folders = await _context.Folders
-                .Include(f => f.Course)
-                .Include(f => f.Documents)
-                .ToListAsync();
-
-            var courses = await _context.Courses.ToListAsync();
-
-            ViewBag.Folders = folders;
-            ViewBag.Courses = courses;
-
-            return View();
+            return RedirectToAction("MyDocuments", "Home");
         }
 
         // GET: Folder/Create
         public async Task<IActionResult> Create()
         {
-            var courses = await _context.Courses.ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View();
         }
@@ -50,13 +43,12 @@ namespace DMS.Controllers
         {
             if (ModelState.IsValid)
             {
-                folder.CreatedDate = DateTime.Now;
-                _context.Add(folder);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                await _folderService.CreateFolderAsync(folder);
+                return RedirectToAction("MyDocuments", "Home");
             }
 
-            var courses = await _context.Courses.ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View(folder);
         }
@@ -69,13 +61,14 @@ namespace DMS.Controllers
                 return NotFound();
             }
 
-            var folder = await _context.Folders.FindAsync(id);
+            var folder = await _folderService.GetFolderByIdAsync(id.Value);
             if (folder == null)
             {
                 return NotFound();
             }
 
-            var courses = await _context.Courses.ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View(folder);
         }
@@ -92,23 +85,16 @@ namespace DMS.Controllers
 
             if (ModelState.IsValid)
             {
-                try
+                var result = await _folderService.UpdateFolderAsync(folder);
+                if (!result)
                 {
-                    _context.Update(folder);
-                    await _context.SaveChangesAsync();
+                    return NotFound();
                 }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!FolderExists(folder.Id))
-                    {
-                        return NotFound();
-                    }
-                    throw;
-                }
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("MyDocuments", "Home");
             }
 
-            var courses = await _context.Courses.ToListAsync();
+            var user = await _userManager.GetUserAsync(User);
+            var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View(folder);
         }
@@ -118,13 +104,97 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var folder = await _context.Folders.FindAsync(id);
-            if (folder != null)
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
             {
-                _context.Folders.Remove(folder);
-                await _context.SaveChangesAsync();
+                return RedirectToAction("Login", "Account");
             }
-            return RedirectToAction(nameof(Index));
+
+            var result = await _folderService.DeleteFolderAsync(id, user.Id);
+            if (result)
+            {
+                TempData["SuccessMessage"] = "Thư mục đã được chuyển vào thùng rác.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể xóa thư mục này.";
+            }
+            
+            return RedirectToAction("MyDocuments", "Home");
+        }
+
+        // GET: Folder/RecycleBin
+        [HttpGet]
+        public async Task<IActionResult> RecycleBin()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var deletedFolders = await _folderService.GetDeletedFoldersAsync(user.Id);
+            ViewBag.DeletedFolders = deletedFolders;
+            
+            return View();
+        }
+
+        // POST: Folder/Restore/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var result = await _folderService.RestoreFolderAsync(id);
+            if (result)
+            {
+                TempData["SuccessMessage"] = "Thư mục đã được khôi phục.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể khôi phục thư mục này.";
+            }
+            
+            return RedirectToAction("RecycleBin", "Document");
+        }
+
+        // POST: Folder/DeletePermanently/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeletePermanently(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            // Check if folder exists and is deleted
+            var folder = await _folderService.GetFolderByIdAsync(id);
+            if (folder == null || !folder.IsDeleted)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy thư mục đã xóa";
+                return RedirectToAction("RecycleBin", "Document");
+            }
+
+            // Check permission: user can only delete their own folders unless they're admin
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            if (!isAdmin && folder.CreatedBy != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền xóa vĩnh viễn thư mục này";
+                return RedirectToAction("RecycleBin", "Document");
+            }
+
+            var result = await _folderService.DeletePermanentlyAsync(id);
+            if (result)
+            {
+                TempData["SuccessMessage"] = "Đã xóa vĩnh viễn thư mục thành công";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể xóa vĩnh viễn thư mục";
+            }
+            
+            return RedirectToAction("RecycleBin", "Document");
         }
 
         // GET: Folder/Permissions/5
@@ -135,7 +205,7 @@ namespace DMS.Controllers
                 return NotFound();
             }
 
-            var folder = await _context.Folders.FindAsync(id);
+            var folder = await _folderService.GetFolderByIdAsync(id.Value);
             if (folder == null)
             {
                 return NotFound();
@@ -149,9 +219,76 @@ namespace DMS.Controllers
             return View();
         }
 
-        private bool FolderExists(int id)
+        // POST: Share Folder to Course
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Share(int folderId, int courseId)
         {
-            return _context.Folders.Any(e => e.Id == id);
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var folder = await _folderService.GetFolderByIdAsync(folderId);
+            if (folder == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy thư mục";
+                return RedirectToAction("MyDocuments", "Home");
+            }
+
+            // Check permission: user can only share their own folders unless they're admin
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            if (!isAdmin && folder.CreatedBy != user.Id)
+            {
+                TempData["ErrorMessage"] = "Bạn không có quyền chia sẻ thư mục này";
+                return RedirectToAction("MyDocuments", "Home");
+            }
+
+            // Verify that the course belongs to this instructor (unless admin)
+            if (!isAdmin)
+            {
+                var course = await _courseService.GetCourseByIdAsync(courseId);
+                if (course == null || course.InstructorId != user.Id)
+                {
+                    TempData["ErrorMessage"] = "Bạn không có quyền chia sẻ vào khóa học này";
+                    return RedirectToAction("MyDocuments", "Home");
+                }
+            }
+
+            // Update folder's CourseId
+            folder.CourseId = courseId;
+            var result = await _folderService.UpdateFolderAsync(folder);
+            if (result)
+            {
+                TempData["SuccessMessage"] = "Đã chia sẻ thư mục thành công";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể chia sẻ thư mục";
+            }
+
+            // Redirect back to previous page or MyDocuments
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrEmpty(referer) && referer.Contains("/Home/CourseDetails"))
+            {
+                // Extract courseId from referer if possible
+                try
+                {
+                    var uri = new Uri(referer);
+                    var courseIdParam = Request.Query["id"].ToString();
+                    if (int.TryParse(courseIdParam, out var courseIdFromReferer))
+                    {
+                        return RedirectToAction("CourseDetails", "Home", new { id = courseIdFromReferer });
+                    }
+                }
+                catch
+                {
+                    // If parsing fails, just redirect to MyDocuments
+                }
+            }
+
+            return RedirectToAction("MyDocuments", "Home");
         }
     }
 }

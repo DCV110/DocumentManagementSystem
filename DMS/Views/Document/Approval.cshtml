@@ -14,6 +14,7 @@
         var roles = await UserManager.GetRolesAsync(currentUser);
         isAdmin = roles.Contains("Admin");
     }
+    var filter = ViewBag.Filter as string ?? "pending";
 }
 
 @if (isAdmin)
@@ -40,18 +41,82 @@ else
         </div>
     </div>
 
+    <!-- TempData Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div style="margin: 20px 24px; padding: 16px 20px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 8px; color: #16a34a; display: flex; align-items: center; gap: 12px;">
+            <span class="material-symbols-outlined" style="font-size: 24px;">check_circle</span>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div style="margin: 20px 24px; padding: 16px 20px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; color: #dc2626; display: flex; align-items: center; gap: 12px;">
+            <span class="material-symbols-outlined" style="font-size: 24px;">error</span>
+            <span>@TempData["ErrorMessage"]</span>
+        </div>
+    }
+
     <!-- Content Body -->
     <div class="content-body">
+        <!-- Tabs -->
+        <div class="approval-tabs" style="margin-bottom: 24px; border-bottom: 2px solid #e5e7eb;">
+            <a href="@Url.Action("Approval", "Document", new { filter = "pending" })" 
+               class="approval-tab @(filter == "pending" ? "active" : "")" 
+               style="display: inline-block; padding: 12px 24px; text-decoration: none; color: #6b7280; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 20px; margin-right: 8px;">pending</span>
+                Chờ duyệt
+            </a>
+            <a href="@Url.Action("Approval", "Document", new { filter = "approved" })" 
+               class="approval-tab @(filter == "approved" ? "active" : "")" 
+               style="display: inline-block; padding: 12px 24px; text-decoration: none; color: #6b7280; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 20px; margin-right: 8px;">check_circle</span>
+                Đã phê duyệt
+            </a>
+            <a href="@Url.Action("Approval", "Document", new { filter = "rejected" })" 
+               class="approval-tab @(filter == "rejected" ? "active" : "")" 
+               style="display: inline-block; padding: 12px 24px; text-decoration: none; color: #6b7280; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s;">
+                <span class="material-symbols-outlined" style="vertical-align: middle; font-size: 20px; margin-right: 8px;">cancel</span>
+                Đã từ chối
+            </a>
+        </div>
+
         <!-- Summary Cards -->
         <div class="summary-cards">
             <div class="summary-card">
                 <div class="summary-card-header">
                     <div>
-                        <div class="summary-card-label">Chờ duyệt</div>
+                        <div class="summary-card-label">
+                            @if (filter == "pending")
+                            {
+                                <text>Chờ duyệt</text>
+                            }
+                            else if (filter == "approved")
+                            {
+                                <text>Đã phê duyệt</text>
+                            }
+                            else
+                            {
+                                <text>Đã từ chối</text>
+                            }
+                        </div>
                         <div class="summary-card-value">@(ViewBag.Documents != null ? ((List<DMS.Models.Document>)ViewBag.Documents).Count : 0)</div>
                     </div>
-                    <div class="summary-card-icon yellow">
-                        <span class="material-symbols-outlined">pending</span>
+                    <div class="summary-card-icon @(filter == "pending" ? "yellow" : filter == "approved" ? "green" : "red")">
+                        <span class="material-symbols-outlined">
+                            @if (filter == "pending")
+                            {
+                                <text>pending</text>
+                            }
+                            else if (filter == "approved")
+                            {
+                                <text>check_circle</text>
+                            }
+                            else
+                            {
+                                <text>cancel</text>
+                            }
+                        </span>
                     </div>
                 </div>
             </div>
@@ -66,6 +131,7 @@ else
                         <th>Người đăng</th>
                         <th>Môn học</th>
                         <th>Ngày đăng</th>
+                        <th>Loại yêu cầu</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -97,23 +163,150 @@ else
                                     </div>
                                 </td>
                                 <td style="color: #6b7280;">@doc.User?.FullName</td>
-                                <td style="color: #6b7280;">@doc.Course?.CourseName</td>
-                                <td style="color: #6b7280;">@doc.UploadDate.ToString("dd/MM/yyyy")</td>
+                                <td style="color: #6b7280;">@(doc.Course?.CourseName ?? "-")</td>
+                                <td style="color: #6b7280;">
+                                    @if (filter == "approved" && doc.ApprovedDate.HasValue)
+                                    {
+                                        @doc.ApprovedDate.Value.ToString("dd/MM/yyyy")
+                                    }
+                                    else if (filter == "rejected")
+                                    {
+                                        @doc.UploadDate.ToString("dd/MM/yyyy")
+                                    }
+                                    else
+                                    {
+                                        @doc.UploadDate.ToString("dd/MM/yyyy")
+                                    }
+                                </td>
+                                <td>
+                                    @if (filter == "pending")
+                                    {
+                                        @if (doc.PublicShareRequested && !doc.PublicShareApproved)
+                                        {
+                                            <span class="status-badge-modern" style="background: #fef3c7; color: #d97706;">
+                                                <span class="status-dot-modern" style="background: #f59e0b;"></span>
+                                                Chia sẻ công khai
+                                            </span>
+                                        }
+                                        else if (doc.Status == DocumentStatus.Pending)
+                                        {
+                                            <span class="status-badge-modern" style="background: #dbeafe; color: #1e40af;">
+                                                <span class="status-dot-modern" style="background: #3b82f6;"></span>
+                                                Phê duyệt tài liệu
+                                            </span>
+                                        }
+                                    }
+                                    else if (filter == "approved")
+                                    {
+                                        @if (doc.IsPublicShared && doc.PublicShareApproved)
+                                        {
+                                            <span class="status-badge-modern" style="background: #dcfce7; color: #16a34a;">
+                                                <span class="status-dot-modern" style="background: #22c55e;"></span>
+                                                Đã public
+                                            </span>
+                                        }
+                                        else if (doc.CourseId != null)
+                                        {
+                                            <span class="status-badge-modern" style="background: #dbeafe; color: #1e40af;">
+                                                <span class="status-dot-modern" style="background: #3b82f6;"></span>
+                                                Đã phê duyệt
+                                            </span>
+                                        }
+                                        else if (doc.PublicShareToken != null)
+                                        {
+                                            <span class="status-badge-modern" style="background: #fef3c7; color: #d97706;">
+                                                <span class="status-dot-modern" style="background: #f59e0b;"></span>
+                                                Đã tắt public
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge-modern" style="background: #dbeafe; color: #1e40af;">
+                                                <span class="status-dot-modern" style="background: #3b82f6;"></span>
+                                                Đã phê duyệt
+                                            </span>
+                                        }
+                                    }
+                                    else if (filter == "rejected")
+                                    {
+                                        <span class="status-badge-modern" style="background: #fee2e2; color: #dc2626;">
+                                            <span class="status-dot-modern" style="background: #ef4444;"></span>
+                                            Đã từ chối
+                                        </span>
+                                    }
+                                </td>
                                 <td>
                                     <div class="approval-actions">
                                         <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn-small" title="Xem">
                                             <span class="material-symbols-outlined">visibility</span>
                                         </a>
-                                        <form method="post" action="@Url.Action("Approve", "Document")" style="display: inline;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@doc.Id" />
-                                            <button type="submit" class="action-btn-small approve-btn" title="Duyệt">
-                                                <span class="material-symbols-outlined">check_circle</span>
-                                            </button>
-                                        </form>
-                                        <button type="button" class="action-btn-small reject-btn" onclick="showRejectModal(@doc.Id)" title="Từ chối">
-                                            <span class="material-symbols-outlined">cancel</span>
-                                        </button>
+                                        @if (filter == "pending")
+                                        {
+                                            @if (doc.PublicShareRequested && !doc.PublicShareApproved)
+                                            {
+                                                <form method="post" action="@Url.Action("ApprovePublicShare", "Document")" style="display: inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="documentId" value="@doc.Id" />
+                                                    <button type="submit" class="action-btn-small approve-btn" title="Duyệt chia sẻ công khai">
+                                                        <span class="material-symbols-outlined">check_circle</span>
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="action-btn-small reject-btn" onclick="showRejectPublicShareModal(@doc.Id)" title="Từ chối chia sẻ công khai">
+                                                    <span class="material-symbols-outlined">cancel</span>
+                                                </button>
+                                            }
+                                            else if (doc.Status == DocumentStatus.Pending)
+                                            {
+                                                <form method="post" action="@Url.Action("Approve", "Document")" style="display: inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@doc.Id" />
+                                                    <button type="submit" class="action-btn-small approve-btn" title="Duyệt">
+                                                        <span class="material-symbols-outlined">check_circle</span>
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="action-btn-small reject-btn" onclick="showRejectModal(@doc.Id)" title="Từ chối">
+                                                    <span class="material-symbols-outlined">cancel</span>
+                                                </button>
+                                            }
+                                        }
+                                        else if (filter == "approved")
+                                        {
+                                            <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="action-btn-small" title="Chỉnh sửa">
+                                                <span class="material-symbols-outlined">edit</span>
+                                            </a>
+                                            @if (doc.IsPublicShared && doc.PublicShareApproved)
+                                            {
+                                                <form method="post" action="@Url.Action("Unpublish", "Document")" id="unpublishForm_@doc.Id" style="display: inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="documentId" value="@doc.Id" />
+                                                    <button type="button" class="action-btn-small" title="Bỏ public" style="color: #dc2626;" onclick="showConfirmModal('Bạn có chắc muốn bỏ chia sẻ công khai tài liệu này?', function() { document.getElementById('unpublishForm_@doc.Id').submit(); });">
+                                                        <span class="material-symbols-outlined">public_off</span>
+                                                    </button>
+                                                </form>
+                                            }
+                                            else if ((doc.CourseId != null || doc.PublicShareToken != null) && !doc.IsPublicShared)
+                                            {
+                                                <form method="post" action="@Url.Action("Publish", "Document")" id="publishForm_@doc.Id" style="display: inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="documentId" value="@doc.Id" />
+                                                    <button type="button" class="action-btn-small" title="Mở lại public" style="color: #16a34a;" onclick="showConfirmModal('Bạn có chắc muốn mở lại chia sẻ công khai tài liệu này?', function() { document.getElementById('publishForm_@doc.Id').submit(); });">
+                                                        <span class="material-symbols-outlined">public</span>
+                                                    </button>
+                                                </form>
+                                            }
+                                        }
+                                        else if (filter == "rejected")
+                                        {
+                                            <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="action-btn-small" title="Chỉnh sửa">
+                                                <span class="material-symbols-outlined">edit</span>
+                                            </a>
+                                            @if (!string.IsNullOrEmpty(doc.RejectionReason))
+                                            {
+                                                <button type="button" class="action-btn-small" title="Xem lý do từ chối" onclick="showRejectionReason('@doc.RejectionReason.Replace("'", "\\'")')">
+                                                    <span class="material-symbols-outlined">info</span>
+                                                </button>
+                                            }
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -123,7 +316,7 @@ else
                     else
                     {
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 48px;">
+                            <td colspan="6" style="text-align: center; padding: 48px;">
                                 <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">check_circle</span>
                                 <p style="color: #6b7280; margin: 0;">Không có tài liệu nào chờ duyệt</p>
                             </td>
@@ -147,6 +340,7 @@ else
         <form method="post" action="@Url.Action("Reject", "Document")" id="rejectForm">
             @Html.AntiForgeryToken()
             <input type="hidden" name="id" id="rejectDocId" />
+            <input type="hidden" name="documentId" id="rejectDocIdForPublic" />
             <div class="modal-body">
                 <label class="form-label">Lý do từ chối <span class="required">*</span></label>
                 <textarea name="reason" class="form-textarea" rows="4" placeholder="Nhập lý do từ chối..." required></textarea>
@@ -259,11 +453,222 @@ else
     padding: 20px 24px;
     border-top: 1px solid #e5e7eb;
 }
+
+.approval-tab.active {
+    color: #0959aa !important;
+    border-bottom-color: #0959aa !important;
+}
+
+.approval-tab:hover {
+    color: #0959aa;
+}
+
+.summary-card-icon.green {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.summary-card-icon.red {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.status-badge-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-dot-modern {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+/* Custom Modal Styles */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.custom-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.custom-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 480px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.custom-modal-overlay.show .custom-modal {
+    transform: scale(1) translateY(0);
+}
+
+.custom-modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.custom-modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.custom-modal-icon.info {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.custom-modal-icon.warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.custom-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0;
+}
+
+.custom-modal-body {
+    padding: 24px;
+    color: #6b7280;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.custom-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: #f9fafb;
+}
+
+.custom-modal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    min-width: 80px;
+}
+
+.custom-modal-btn-secondary {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.custom-modal-btn-secondary:hover {
+    background: #f3f4f6;
+    color: #111418;
+}
+
+.custom-modal-btn-primary {
+    background: #0959aa;
+    color: white;
+}
+
+.custom-modal-btn-primary:hover {
+    background: #084a8f;
+}
+
+.custom-modal-btn-danger {
+    background: #dc2626;
+    color: white;
+}
+
+.custom-modal-btn-danger:hover {
+    background: #b91c1c;
+}
 </style>
+
+<!-- Custom Confirm Modal -->
+<div id="confirmModal" class="custom-modal-overlay">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <div class="custom-modal-icon warning">
+                <span class="material-symbols-outlined">warning</span>
+            </div>
+            <h3 class="custom-modal-title">Xác nhận</h3>
+        </div>
+        <div class="custom-modal-body" id="confirmModalMessage">
+            <!-- Message will be inserted here -->
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="custom-modal-btn custom-modal-btn-secondary" onclick="closeConfirmModal()">Hủy</button>
+            <button type="button" class="custom-modal-btn custom-modal-btn-primary" id="confirmModalOkBtn">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Alert Modal -->
+<div id="alertModal" class="custom-modal-overlay">
+    <div class="custom-modal">
+        <div class="custom-modal-header">
+            <div class="custom-modal-icon info">
+                <span class="material-symbols-outlined">info</span>
+            </div>
+            <h3 class="custom-modal-title" id="alertModalTitle">Thông báo</h3>
+        </div>
+        <div class="custom-modal-body" id="alertModalMessage">
+            <!-- Message will be inserted here -->
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="custom-modal-btn custom-modal-btn-primary" onclick="closeAlertModal()">Đóng</button>
+        </div>
+    </div>
+</div>
 
 <script>
 function showRejectModal(docId) {
     document.getElementById('rejectDocId').value = docId;
+    document.getElementById('rejectDocIdForPublic').value = ''; // Clear public share field
+    document.getElementById('rejectForm').action = '@Url.Action("Reject", "Document")';
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+
+function showRejectPublicShareModal(docId) {
+    document.getElementById('rejectDocIdForPublic').value = docId;
+    document.getElementById('rejectDocId').value = ''; // Clear regular reject field
+    document.getElementById('rejectForm').action = '@Url.Action("RejectPublicShare", "Document")';
     document.getElementById('rejectModal').style.display = 'flex';
 }
 
@@ -272,11 +677,71 @@ function closeRejectModal() {
     document.getElementById('rejectForm').reset();
 }
 
+function showRejectionReason(reason) {
+    showAlertModal('Lý do từ chối', reason);
+}
+
+let confirmCallback = null;
+
+function showConfirmModal(message, callback) {
+    document.getElementById('confirmModalMessage').textContent = message;
+    confirmCallback = callback;
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('show');
+    
+    // Set up OK button
+    const okBtn = document.getElementById('confirmModalOkBtn');
+    okBtn.onclick = function() {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        closeConfirmModal();
+    };
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.remove('show');
+    confirmCallback = null;
+}
+
+function showAlertModal(title, message) {
+    document.getElementById('alertModalTitle').textContent = title;
+    document.getElementById('alertModalMessage').textContent = message;
+    const modal = document.getElementById('alertModal');
+    modal.classList.add('show');
+}
+
+function closeAlertModal() {
+    const modal = document.getElementById('alertModal');
+    modal.classList.remove('show');
+}
+
 // Close modal when clicking outside
 document.getElementById('rejectModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeRejectModal();
     }
 });
-</script>
 
+document.getElementById('confirmModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+document.getElementById('alertModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAlertModal();
+    }
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+        closeAlertModal();
+        closeRejectModal();
+    }
+});
+</script>

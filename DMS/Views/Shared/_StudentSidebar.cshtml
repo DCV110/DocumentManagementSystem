@@ -1,0 +1,32 @@
+@{
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+}
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <span class="material-symbols-outlined">school</span>
+            <span>Academic DMS</span>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="@Url.Action("StudentDashboard", "Home")" class="nav-item @(currentAction == "StudentDashboard" && currentController == "Home" ? "active" : "")">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Tổng quan</span>
+        </a>
+        <a href="@Url.Action("Library", "Document")" class="nav-item @(currentAction == "Library" && currentController == "Document" ? "active" : "")">
+            <span class="material-symbols-outlined">library_books</span>
+            <span>Thư viện tài liệu</span>
+        </a>
+        <a href="@Url.Action("Search", "Document")" class="nav-item @(currentAction == "Search" && currentController == "Document" ? "active" : "")">
+            <span class="material-symbols-outlined">search</span>
+            <span>Tìm kiếm</span>
+        </a>
+        <a href="@Url.Action("MyCourses", "Home")" class="nav-item @(currentAction == "MyCourses" && currentController == "Home" ? "active" : "")">
+            <span class="material-symbols-outlined">book</span>
+            <span>Khóa học của tôi</span>
+        </a>
+    </nav>
+</div>
+

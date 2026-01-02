@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "Tài liệu đang chờ phê duyệt";
+    Layout = "_Layout";
+}
+
+@{
+    var document = ViewBag.Document as DMS.Models.Document;
+    var message = ViewBag.Message as string ?? "Tài liệu này đang chờ phê duyệt từ admin để có thể chia sẻ công khai.";
+}
+
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f9fafb; padding: 24px;">
+    <div style="background: white; border-radius: 12px; padding: 48px; max-width: 500px; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
+        <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <span class="material-symbols-outlined" style="font-size: 48px; color: #d97706;">pending</span>
+        </div>
+        <h1 style="font-size: 24px; font-weight: 600; color: #111418; margin: 0 0 16px 0;">Đang chờ phê duyệt</h1>
+        <p style="font-size: 16px; color: #6b7280; margin: 0 0 24px 0; line-height: 1.6;">@message</p>
+        @if (document != null)
+        {
+            <div style="padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 24px; text-align: left;">
+                <div style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">@document.Title</div>
+                <div style="font-size: 12px; color: #6b7280;">Người đăng: @(document.User?.FullName ?? "Unknown")</div>
+            </div>
+        }
+        <a href="/" style="display: inline-block; padding: 12px 24px; background: #0959aa; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: background 0.2s;">
+            Về trang chủ
+        </a>
+    </div>
+</div>
+

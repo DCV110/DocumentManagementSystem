@@ -1,0 +1,64 @@
+@{
+    ViewData["Title"] = "Shared Document";
+    Layout = "_Layout";
+}
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div style="max-width: 800px; margin: 50px auto; padding: 40px; text-align: center;">
+        <span class="material-symbols-outlined" style="font-size: 64px; color: #dc2626; margin-bottom: 16px;">error</span>
+        <h2 style="color: #111418; margin-bottom: 8px;">Link không hợp lệ</h2>
+        <p style="color: #6b7280;">@ViewBag.ErrorMessage</p>
+    </div>
+}
+else if (ViewBag.Document != null)
+{
+    var document = ViewBag.Document as DMS.Models.Document;
+    if (document != null)
+    {
+        <div style="max-width: 900px; margin: 50px auto; padding: 40px;">
+            <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+                    <span class="material-symbols-outlined" style="font-size: 48px; color: #0959aa;">description</span>
+                    <div style="flex: 1;">
+                        <h1 style="font-size: 24px; font-weight: 700; color: #111418; margin: 0 0 4px 0;">@document.Title</h1>
+                        <p style="font-size: 14px; color: #6b7280; margin: 0;">Được chia sẻ bởi @(document.User?.FullName ?? "Unknown")</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    @if (!string.IsNullOrEmpty(document.Description))
+                    {
+                        <p style="color: #374151; line-height: 1.6; margin-bottom: 16px;">@document.Description</p>
+                    }
+                    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                        <div>
+                            <span style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Kích thước</span>
+                            <span style="font-size: 14px; color: #111418; font-weight: 600;">@((document.FileSize / 1024.0 / 1024.0).ToString("F2")) MB</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Ngày tải lên</span>
+                            <span style="font-size: 14px; color: #111418; font-weight: 600;">@document.UploadDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Định dạng</span>
+                            <span style="font-size: 14px; color: #111418; font-weight: 600;">@System.IO.Path.GetExtension(document.FileName).ToUpper()</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <a href="@Url.Action("Preview", "Document", new { id = document.Id })" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #0959aa; color: white; border: none; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer;">
+                        <span class="material-symbols-outlined">visibility</span>
+                        Xem tài liệu
+                    </a>
+                    <a href="@Url.Action("DownloadShared", "Document", new { token = ViewBag.ShareToken })" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: white; color: #0959aa; border: 2px solid #0959aa; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer;">
+                        <span class="material-symbols-outlined">download</span>
+                        Tải xuống
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+}
+

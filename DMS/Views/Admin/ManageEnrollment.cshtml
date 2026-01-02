@@ -1,0 +1,247 @@
+@{
+    ViewData["Title"] = "Quản lý sinh viên trong lớp học";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var course = ViewBag.Course as DMS.Models.Course;
+    var allStudents = ViewBag.AllStudents as List<DMS.Models.ApplicationUser>;
+    var enrolledStudentIds = ViewBag.EnrolledStudentIds as List<string> ?? new List<string>();
+}
+
+<partial name="_AdminSidebar" />
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Quản lý sinh viên trong lớp học</h1>
+            <p>@course?.CourseCode@(!string.IsNullOrEmpty(course?.ClassCode) ? $" - {course.ClassCode}" : "") - @course?.CourseName</p>
+        </div>
+        <div class="header-actions">
+            <a href="@Url.Action("CourseManagement", "Admin")" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Quay lại
+            </a>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" style="background: #dcfce7; color: #16a34a; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #86efac;">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error" style="background: #fee2e2; color: #dc2626; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #fca5a5;">
+                @TempData["ErrorMessage"]
+            </div>
+        }
+
+        <!-- Course Info Card -->
+        <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="width: 64px; height: 64px; border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                    <span class="material-symbols-outlined" style="font-size: 32px; color: white;">school</span>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 600; color: #111418;">@course?.CourseName</h3>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <div>
+                            <span style="font-size: 12px; color: #6b7280;">Mã môn học:</span>
+                            <span style="font-size: 14px; font-weight: 600; color: #111418; margin-left: 4px;">@course?.CourseCode</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(course?.ClassCode))
+                        {
+                            <div>
+                                <span style="font-size: 12px; color: #6b7280;">Mã lớp:</span>
+                                <span style="font-size: 14px; font-weight: 600; color: #111418; margin-left: 4px;">@course.ClassCode</span>
+                            </div>
+                        }
+                        @if (course?.Instructor != null)
+                        {
+                            <div>
+                                <span style="font-size: 12px; color: #6b7280;">Giảng viên:</span>
+                                <span style="font-size: 14px; font-weight: 600; color: #111418; margin-left: 4px;">@course.Instructor.FullName</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Students List -->
+        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #111418;">Danh sách sinh viên</h2>
+                <div style="font-size: 14px; color: #6b7280;">
+                    Đã đăng ký: <strong style="color: #111418;">@enrolledStudentIds.Count</strong> / @(allStudents?.Count ?? 0)
+                </div>
+            </div>
+
+            @if (allStudents != null && allStudents.Any())
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @foreach (var student in allStudents)
+                    {
+                        var isEnrolled = enrolledStudentIds.Contains(student.Id);
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; background: @(isEnrolled ? "#f0fdf4" : "#fafafa"); transition: all 0.2s;">
+                            <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                                <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px;">
+                                    @(student.FullName?.Substring(0, Math.Min(2, student.FullName.Length)).ToUpper() ?? "SV")
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 15px; font-weight: 600; color: #111418; margin-bottom: 4px;">@student.FullName</div>
+                                    <div style="display: flex; gap: 16px; font-size: 13px; color: #6b7280;">
+                                        @if (!string.IsNullOrEmpty(student.StudentCode))
+                                        {
+                                            <span>MSSV: @student.StudentCode</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(student.Email))
+                                        {
+                                            <span>Email: @student.Email</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                @if (isEnrolled)
+                                {
+                                    <button type="button" 
+                                            class="btn-enrollment enrolled" 
+                                            data-student-id="@student.Id"
+                                            data-course-id="@course?.Id"
+                                            onclick="toggleEnrollment(this)"
+                                            style="padding: 8px 16px; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
+                                        Đã đăng ký
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="button" 
+                                            class="btn-enrollment not-enrolled" 
+                                            data-student-id="@student.Id"
+                                            data-course-id="@course?.Id"
+                                            onclick="toggleEnrollment(this)"
+                                            style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span>
+                                        Thêm vào lớp
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div style="text-align: center; padding: 64px 24px; color: #9ca3af;">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px; display: block;">person_off</span>
+                    <p style="font-size: 16px; margin-bottom: 8px;">Chưa có sinh viên nào trong hệ thống</p>
+                    <p style="font-size: 14px; color: #9ca3af;">Vui lòng tạo sinh viên trước khi gán vào lớp học</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEnrollment(button) {
+    const studentId = button.getAttribute('data-student-id');
+    const courseId = button.getAttribute('data-course-id');
+    const isEnrolled = button.classList.contains('enrolled');
+    
+    // Disable button during request
+    button.disabled = true;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">hourglass_empty</span> Đang xử lý...';
+    
+    // Get anti-forgery token
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    // Create form data
+    const formData = new URLSearchParams();
+    formData.append('courseId', courseId);
+    formData.append('studentId', studentId);
+    if (token) {
+        formData.append('__RequestVerificationToken', token);
+    }
+    
+    fetch('@Url.Action("ToggleStudentEnrollment", "Admin")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'RequestVerificationToken': token || ''
+        },
+        body: formData.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.action === 'added') {
+                // Change to enrolled state
+                button.classList.remove('not-enrolled');
+                button.classList.add('enrolled');
+                button.style.background = '#16a34a';
+                button.style.color = 'white';
+                button.style.border = 'none';
+                button.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span> Đã đăng ký';
+                button.parentElement.parentElement.style.background = '#f0fdf4';
+            } else {
+                // Change to not enrolled state
+                button.classList.remove('enrolled');
+                button.classList.add('not-enrolled');
+                button.style.background = '#f3f4f6';
+                button.style.color = '#6b7280';
+                button.style.border = '1px solid #d1d5db';
+                button.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span> Thêm vào lớp';
+                button.parentElement.parentElement.style.background = '#fafafa';
+            }
+            
+            // Update count
+            const countElement = document.querySelector('strong');
+            if (countElement) {
+                const currentCount = parseInt(countElement.textContent);
+                if (data.action === 'added') {
+                    countElement.textContent = currentCount + 1;
+                } else {
+                    countElement.textContent = currentCount - 1;
+                }
+            }
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+            button.innerHTML = originalHTML;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi cập nhật');
+        button.innerHTML = originalHTML;
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
+}
+</script>
+
+<style>
+.btn-enrollment:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-enrollment:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+

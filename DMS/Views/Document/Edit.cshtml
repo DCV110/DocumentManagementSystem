@@ -1,0 +1,193 @@
+@{
+    ViewData["Title"] = "Chỉnh sửa tài liệu - Teaching Staff Studio";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isAdmin)
+{
+    <partial name="_AdminSidebar" />
+}
+else
+{
+    <partial name="_InstructorSidebar" />
+}
+
+@{
+    var document = ViewBag.Document as DMS.Models.Document;
+}
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Chỉnh sửa tài liệu</h1>
+            <p>Cập nhật thông tin tài liệu của bạn</p>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger" style="background: #fee2e2; color: #dc2626; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #fca5a5;">
+                @TempData["ErrorMessage"]
+            </div>
+        }
+
+        @if (document != null)
+        {
+            <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
+                <!-- File Info -->
+                <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 24px;">
+                    @{
+                        var fileExtension = document.FileName?.Split('.').LastOrDefault()?.ToLower() ?? "";
+                        var fileIcon = "insert_drive_file";
+                        var iconColor = "blue";
+                        
+                        if (fileExtension == "pdf") { fileIcon = "picture_as_pdf"; iconColor = "red"; }
+                        else if (fileExtension == "doc" || fileExtension == "docx") { fileIcon = "description"; iconColor = "blue"; }
+                        else if (fileExtension == "ppt" || fileExtension == "pptx") { fileIcon = "slideshow"; iconColor = "purple"; }
+                        else if (fileExtension == "xls" || fileExtension == "xlsx") { fileIcon = "table_chart"; iconColor = "green"; }
+                        
+                        var fileSizeMB = (document.FileSize / 1024.0 / 1024.0).ToString("F2");
+                    }
+                    <div class="document-item-icon @iconColor" style="width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                        <span class="material-symbols-outlined">@fileIcon</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 4px 0; color: #111418; font-size: 16px; font-weight: 600;">@document.FileName</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">@fileSizeMB MB • @fileExtension.ToUpper()</p>
+                    </div>
+                </div>
+
+                <!-- Edit Form -->
+                <form method="post" action="@Url.Action("Edit", "Document", new { id = document.Id })">
+                    @Html.AntiForgeryToken()
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label for="title" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                            Tên tài liệu <span style="color: #dc2626;">*</span>
+                        </label>
+                        <input type="text" id="title" name="title" value="@document.Title" required 
+                               style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; transition: all 0.2s; box-sizing: border-box;"
+                               placeholder="Nhập tên tài liệu" />
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="description" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                            Mô tả
+                        </label>
+                        <textarea id="description" name="description" rows="4" 
+                                  style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; transition: all 0.2s; font-family: inherit; resize: vertical; box-sizing: border-box;"
+                                  placeholder="Mô tả ngắn về tài liệu (tùy chọn)">@(document.Description ?? "")</textarea>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label for="folderId" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
+                            Thư mục (tùy chọn)
+                        </label>
+                        <select id="folderId" name="folderId" 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; color: #111418; transition: all 0.2s; box-sizing: border-box;">
+                            <option value="">-- Không chọn (file lẻ) --</option>
+                            @if (ViewBag.Folders != null)
+                            {
+                                @foreach (var folder in (List<DMS.Models.Folder>)ViewBag.Folders)
+                                {
+                                    if (document.FolderId == folder.Id)
+                                    {
+                                        <option value="@folder.Id" selected>@folder.FolderName</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@folder.Id">@folder.FolderName</option>
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                        <a href="@Url.Action("MyDocuments", "Home")" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; text-decoration: none; transition: all 0.2s;">
+                            Hủy
+                        </a>
+                        <button type="submit" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">save</span>
+                            Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div style="text-align: center; padding: 64px 32px; color: #6b7280;">
+                <span class="material-symbols-outlined" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px; display: block;">error_outline</span>
+                <h3 style="color: #111418; margin-bottom: 8px;">Không tìm thấy tài liệu</h3>
+                <p>Tài liệu không tồn tại hoặc đã bị xóa</p>
+                <a href="@Url.Action("MyDocuments", "Home")" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #0959aa; color: white; border-radius: 6px; text-decoration: none;">
+                    Quay lại
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .document-item-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .document-item-icon.blue {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    
+    .document-item-icon.red {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .document-item-icon.purple {
+        background: #f3e8ff;
+        color: #9333ea;
+    }
+    
+    .document-item-icon.green {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+        outline: none;
+        border-color: #0959aa;
+        box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
+    }
+    
+    button:hover {
+        background: #075985 !important;
+    }
+    
+    a:hover {
+        background: #f9fafb !important;
+    }
+</style>
+

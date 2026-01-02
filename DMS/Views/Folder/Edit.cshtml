@@ -59,15 +59,28 @@ else
 
                     <div class="form-group">
                         <label asp-for="CourseId" class="form-label">Môn học <span class="required">*</span></label>
-                        <select asp-for="CourseId" class="form-select" asp-items="@(new SelectList(ViewBag.Courses, "Id", "CourseName"))">
+                        <select asp-for="CourseId" class="form-select">
                             <option value="">-- Chọn môn học --</option>
+                            @if (ViewBag.Courses != null)
+                            {
+                                @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                                {
+                                    var displayText = $"{course.CourseCode}";
+                                    if (!string.IsNullOrEmpty(course.ClassCode))
+                                    {
+                                        displayText += $" - {course.ClassCode}";
+                                    }
+                                    displayText += $" - {course.CourseName}";
+                                    <option value="@course.Id" selected="@(course.Id == Model.CourseId)">@displayText</option>
+                                }
+                            }
                         </select>
                         <span asp-validation-for="CourseId" class="text-danger"></span>
                     </div>
                 </div>
 
                 <div class="form-actions">
-                    <a href="@Url.Action("Index", "Folder")" class="btn-secondary" style="text-decoration: none;">
+                    <a href="@Url.Action("MyDocuments", "Home")" class="btn-secondary" style="text-decoration: none;">
                         <span class="material-symbols-outlined">arrow_back</span>
                         Hủy
                     </a>

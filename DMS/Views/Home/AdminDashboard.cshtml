@@ -33,30 +33,51 @@
                 <p class="kpi-label">Tổng người dùng</p>
                 <span class="material-symbols-outlined kpi-icon blue">people</span>
             </div>
-            <p class="kpi-value">1,248</p>
-            <p class="kpi-description" style="color: #16a34a;">
-                <span style="color: #16a34a;">↑</span> +12 tuần này
-            </p>
+            <p class="kpi-value">@(ViewBag.TotalUsers ?? 0)</p>
+            @if (ViewBag.UsersThisWeek > 0)
+            {
+                <p class="kpi-description" style="color: #16a34a;">
+                    <span style="color: #16a34a;">↑</span> +@(ViewBag.UsersThisWeek) tuần này
+                </p>
+            }
+            else
+            {
+                <p class="kpi-description" style="color: #6b7280;">Không có thay đổi</p>
+            }
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
                 <p class="kpi-label">Tổng tài liệu</p>
                 <span class="material-symbols-outlined kpi-icon" style="color: #9333ea;">description</span>
             </div>
-            <p class="kpi-value">8,502</p>
-            <p class="kpi-description" style="color: #16a34a;">
-                <span style="color: #16a34a;">↑</span> +156 tháng này
-            </p>
+            <p class="kpi-value">@(ViewBag.TotalDocuments ?? 0)</p>
+            @if (ViewBag.DocumentsThisMonth > 0)
+            {
+                <p class="kpi-description" style="color: #16a34a;">
+                    <span style="color: #16a34a;">↑</span> +@(ViewBag.DocumentsThisMonth) tháng này
+                </p>
+            }
+            else
+            {
+                <p class="kpi-description" style="color: #6b7280;">Không có thay đổi</p>
+            }
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
                 <p class="kpi-label">Chờ duyệt</p>
                 <span class="material-symbols-outlined kpi-icon" style="color: #f97316;">hourglass_empty</span>
             </div>
-            <p class="kpi-value">24</p>
-            <p class="kpi-description" style="color: #dc2626;">
-                <span style="color: #dc2626;">!</span> 5 yêu cầu khẩn cấp
-            </p>
+            <p class="kpi-value">@(ViewBag.PendingDocuments ?? 0)</p>
+            @if (ViewBag.UrgentRequests > 0)
+            {
+                <p class="kpi-description" style="color: #dc2626;">
+                    <span style="color: #dc2626;">!</span> @(ViewBag.UrgentRequests) yêu cầu khẩn cấp
+                </p>
+            }
+            else
+            {
+                <p class="kpi-description" style="color: #16a34a;">Không có yêu cầu</p>
+            }
         </div>
         <div class="kpi-card">
             <div class="kpi-card-header">
@@ -64,7 +85,7 @@
                 <span class="material-symbols-outlined kpi-icon green">dns</span>
             </div>
             <p class="kpi-value">99.9%</p>
-            <p class="kpi-description">Lưu trữ sử dụng: 65% (1.2TB)</p>
+            <p class="kpi-description">Lưu trữ sử dụng: @(Math.Round((double)(ViewBag.StoragePercentage ?? 0), 1))% (@(Math.Round((double)(ViewBag.TotalStorageGB ?? 0), 2))GB)</p>
         </div>
     </div>
 
@@ -86,114 +107,77 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>
-                                <div class="document-info">
-                                    <div class="document-icon blue">
-                                        <span class="material-symbols-outlined">upload_file</span>
-                                    </div>
-                                    <div class="document-details">
-                                        <h5>Nộp tài liệu mới</h5>
-                                        <p>Luận văn tốt nghiệp K15</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="instructor-info">
-                                    <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=Nguyễn+Văn+A&background=1e40af&color=fff')"></div>
-                                    <div class="instructor-details">
-                                        <h6>Nguyễn Văn A</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td style="color: #60758a; font-size: 14px;">10 phút trước</td>
-                            <td>
-                                <div class="action-buttons-group">
-                                    <span class="status-badge blue">Chờ duyệt</span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <div class="document-info">
-                                    <div class="document-icon green">
-                                        <span class="material-symbols-outlined">person_add</span>
-                                    </div>
-                                    <div class="document-details">
-                                        <h5>Đăng ký thành viên</h5>
-                                        <p>Khoa CNTT</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="instructor-info">
-                                    <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=Trần+Thị+B&background=7c3aed&color=fff')"></div>
-                                    <div class="instructor-details">
-                                        <h6>Trần Thị B</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td style="color: #60758a; font-size: 14px;">32 phút trước</td>
-                            <td>
-                                <div class="action-buttons-group">
-                                    <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">Hoàn tất</span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <div class="document-info">
-                                    <div class="document-icon" style="background: #f3e8ff; color: #9333ea;">
-                                        <span class="material-symbols-outlined">check_circle</span>
-                                    </div>
-                                    <div class="document-details">
-                                        <h5>Phê duyệt tài liệu</h5>
-                                        <p>Báo cáo nghiên cứu AI</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="instructor-info">
-                                    <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=Admin&background=0959aa&color=fff')"></div>
-                                    <div class="instructor-details">
-                                        <h6>Admin (Bạn)</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td style="color: #60758a; font-size: 14px;">1 giờ trước</td>
-                            <td>
-                                <div class="action-buttons-group">
-                                    <span class="status-badge gray">Đã xuất bản</span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <div class="document-info">
-                                    <div class="document-icon" style="background: #fef2f2; color: #f97316;">
-                                        <span class="material-symbols-outlined">warning</span>
-                                    </div>
-                                    <div class="document-details">
-                                        <h5>Báo cáo vi phạm</h5>
-                                        <p>Nội dung không phù hợp</p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="instructor-info">
-                                    <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=Lê+Văn+C&background=ea580c&color=fff')"></div>
-                                    <div class="instructor-details">
-                                        <h6>Lê Văn C</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td style="color: #60758a; font-size: 14px;">2 giờ trước</td>
-                            <td>
-                                <div class="action-buttons-group">
-                                    <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">Cần xử lý</span>
-                                </div>
-                            </td>
-                        </tr>
+                        @if (ViewBag.RecentActivities != null)
+                        {
+                            var activities = ViewBag.RecentActivities as List<dynamic>;
+                            @if (activities != null && activities.Any())
+                            {
+                                @foreach (var activity in activities)
+                                {
+                                    var activityUser = activity.User as DMS.Models.ApplicationUser;
+                                    var iconClass = activity.Type == "document_upload" ? "blue" : "green";
+                                    var iconSymbol = activity.Type == "document_upload" ? "upload_file" : "person_add";
+                                    var statusBadgeClass = activity.StatusClass == "blue" ? "status-badge blue" :
+                                                          activity.StatusClass == "green" ? "status-badge" : 
+                                                          activity.StatusClass == "red" ? "status-badge" : "status-badge gray";
+                                    var statusBadgeStyle = activity.StatusClass == "green" ? "background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);" :
+                                                           activity.StatusClass == "red" ? "background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);" : "";
+                                    
+                                    <tr>
+                                        <td>
+                                            <div class="document-info">
+                                                <div class="document-icon @iconClass">
+                                                    <span class="material-symbols-outlined">@iconSymbol</span>
+                                                </div>
+                                                <div class="document-details">
+                                                    <h5>@activity.Title</h5>
+                                                    <p>@activity.Description</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="instructor-info">
+                                                <div class="instructor-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@(activityUser?.FullName ?? "User")&background=1e40af&color=fff')"></div>
+                                                <div class="instructor-details">
+                                                    <h6>@(activityUser?.FullName ?? "Người dùng")</h6>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="color: #60758a; font-size: 14px;">@activity.TimeAgo</td>
+                                        <td>
+                                            <div class="action-buttons-group">
+                                                @if (!string.IsNullOrEmpty(statusBadgeStyle))
+                                                {
+                                                    <span class="@statusBadgeClass" style="@statusBadgeStyle">@activity.Status</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="@statusBadgeClass">@activity.Status</span>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 48px; color: #6b7280;">
+                                        <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">inbox</span>
+                                        <p style="margin: 0;">Chưa có hoạt động gần đây</p>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 48px; color: #6b7280;">
+                                    <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">inbox</span>
+                                    <p style="margin: 0;">Chưa có hoạt động gần đây</p>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>
@@ -209,24 +193,43 @@
                         <span class="material-symbols-outlined" style="color: #dc2626; font-size: 20px;">notifications</span>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
-                            <div style="display: flex; align-items: start; gap: 12px;">
-                                <span class="material-symbols-outlined" style="color: #f97316; font-size: 24px;">sync</span>
-                                <div>
-                                    <h5 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">Bảo trì hệ thống</h5>
-                                    <p style="font-size: 12px; color: #60758a;">Hệ thống sẽ bảo trì định kỳ vào 02:00 AM ngày 25/10. Vui lòng lưu lại công việc.</p>
+                        @if (ViewBag.StoragePercentage != null && (double)ViewBag.StoragePercentage > 80)
+                        {
+                            <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                                <div style="display: flex; align-items: start; gap: 12px;">
+                                    <span class="material-symbols-outlined" style="color: #dc2626; font-size: 24px;">storage</span>
+                                    <div>
+                                        <h5 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">Cảnh báo dung lượng</h5>
+                                        <p style="font-size: 12px; color: #60758a;">Dung lượng lưu trữ đạt @(Math.Round((double)ViewBag.StoragePercentage, 1))% (@(Math.Round((double)(ViewBag.TotalStorageGB ?? 0), 2))GB). Cân nhắc dọn dẹp hoặc nâng cấp.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
-                            <div style="display: flex; align-items: start; gap: 12px;">
-                                <span class="material-symbols-outlined" style="color: #dc2626; font-size: 24px;">storage</span>
-                                <div>
-                                    <h5 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">Cảnh báo dung lượng</h5>
-                                    <p style="font-size: 12px; color: #60758a;">Dung lượng ổ cứng máy chủ đạt 85%. Cân nhắc dọn dẹp hoặc nâng cấp.</p>
+                        }
+                        @if (ViewBag.UrgentRequests != null && (int)ViewBag.UrgentRequests > 5)
+                        {
+                            <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                                <div style="display: flex; align-items: start; gap: 12px;">
+                                    <span class="material-symbols-outlined" style="color: #f97316; font-size: 24px;">warning</span>
+                                    <div>
+                                        <h5 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">Nhiều yêu cầu chờ duyệt</h5>
+                                        <p style="font-size: 12px; color: #60758a;">Có @(ViewBag.UrgentRequests) yêu cầu đang chờ phê duyệt. Vui lòng xử lý sớm.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        }
+                        @if ((ViewBag.StoragePercentage == null || (double)ViewBag.StoragePercentage <= 80) && 
+                             (ViewBag.UrgentRequests == null || (int)ViewBag.UrgentRequests <= 5))
+                        {
+                            <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                                <div style="display: flex; align-items: start; gap: 12px;">
+                                    <span class="material-symbols-outlined" style="color: #16a34a; font-size: 24px;">check_circle</span>
+                                    <div>
+                                        <h5 style="font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 4px;">Hệ thống hoạt động bình thường</h5>
+                                        <p style="font-size: 12px; color: #60758a;">Tất cả các dịch vụ đang hoạt động ổn định.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
 
@@ -259,8 +262,8 @@
                         <span class="material-symbols-outlined" style="font-size: 48px; opacity: 0.2; color: white;">description</span>
                     </div>
                     <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Đã duyệt hôm nay</h3>
-                    <p style="font-size: 48px; font-weight: 700; margin: 16px 0;">18</p>
-                    <p style="font-size: 14px; opacity: 0.9; margin-bottom: 16px;">Còn lại: 6</p>
+                    <p style="font-size: 48px; font-weight: 700; margin: 16px 0;">@(ViewBag.ApprovedToday ?? 0)</p>
+                    <p style="font-size: 14px; opacity: 0.9; margin-bottom: 16px;">Còn lại: @(ViewBag.PendingDocuments ?? 0)</p>
                     <a href="@Url.Action("Approval", "Document")" class="btn" style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3); align-self: flex-end; text-decoration: none; display: inline-block; padding: 8px 16px; border-radius: 6px;">
                         Xem ngay
                     </a>

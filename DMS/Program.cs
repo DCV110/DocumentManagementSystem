@@ -4,6 +4,7 @@ using DMS.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using DMS.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,13 +22,49 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
+    
+    // Cấu hình SignIn options
+    options.SignIn.RequireConfirmedEmail = false; // Không yêu cầu xác nhận email
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+// 4. Cấu hình Cookie Authentication cho Remember Me
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    // Cookie sẽ tồn tại 30 ngày nếu user chọn "Remember Me"
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    // Tự động gia hạn cookie khi user còn hoạt động
+    options.SlidingExpiration = true;
+    // Đường dẫn login và logout
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/Login";
+    // Cookie chỉ được gửi qua HTTPS trong production
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    // Cookie chỉ có thể truy cập qua HTTP (không qua JavaScript)
+    options.Cookie.HttpOnly = true;
+    // Tên cookie
+    options.Cookie.Name = "DMS.Auth";
+    // Cookie sẽ tồn tại ngay cả khi browser đóng (nếu Remember Me)
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
+
 // 4. Đăng ký các Service nội bộ (Dependency Injection)
-// Bạn nên đăng ký ở đây để các Controller có thể sử dụng DocumentService
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IFolderService, FolderService>();
+builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+
+// Cấu hình để tăng giới hạn kích thước request cho upload nhiều file
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 524288000; // 500MB
+    options.ValueLengthLimit = int.MaxValue;
+    options.ValueCountLimit = int.MaxValue;
+    options.KeyLengthLimit = int.MaxValue;
+});
 
 builder.Services.AddControllersWithViews();
 

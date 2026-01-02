@@ -12,6 +12,9 @@ namespace DMS.Models
 
         // Quan hệ: Một người dùng có thể đăng nhiều tài liệu
         public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
+        
+        // Quan hệ: Một sinh viên có thể đăng ký nhiều khóa học
+        public virtual ICollection<StudentCourse> StudentCourses { get; set; } = new List<StudentCourse>();
 
     }
 }
