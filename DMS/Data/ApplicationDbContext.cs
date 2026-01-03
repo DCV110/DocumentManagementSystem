@@ -17,6 +17,7 @@ namespace DMS.Data
         public DbSet<Folder> Folders { get; set; }
         public DbSet<StudentCourse> StudentCourses { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<BackupRecord> BackupRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

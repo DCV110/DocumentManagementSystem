@@ -1,0 +1,84 @@
+@{
+    ViewData["Title"] = "Thông tin hệ thống";
+    Layout = "_SidebarLayout";
+    var systemInfo = ViewBag.SystemInfo as Dictionary<string, string> ?? new Dictionary<string, string>();
+}
+
+<partial name="_AdminSidebar" />
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Thông tin hệ thống</h1>
+            <p>Thông tin về user IIS và process đang chạy ứng dụng</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <div class="upload-container">
+            <div class="form-section">
+                <h3 style="margin-bottom: 16px;">Thông tin Process và Identity</h3>
+                
+                <div style="background: white; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody>
+                            @foreach (var item in systemInfo)
+                            {
+                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                    <td style="padding: 12px; font-weight: 600; color: #374151; width: 40%; vertical-align: top;">
+                                        @item.Key
+                                    </td>
+                                    <td style="padding: 12px; color: #6b7280; word-break: break-all;">
+                                        @if (item.Key.Contains("Identity") || item.Key.Contains("User"))
+                                        {
+                                            <span style="color: #3b82f6; font-weight: 500;">@item.Value</span>
+                                        }
+                                        else
+                                        {
+                                            @item.Value
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 24px; padding: 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">info</span>
+                        Lưu ý
+                    </h4>
+                    <p style="margin: 0; color: #1e40af; font-size: 14px; line-height: 1.6;">
+                        <strong>Windows Identity Name</strong> là user mà ứng dụng đang chạy. Đây thường là Application Pool Identity trong IIS.<br>
+                        Để thay đổi user IIS, mở <strong>IIS Manager</strong> → <strong>Application Pools</strong> → Chọn Application Pool → <strong>Advanced Settings</strong> → <strong>Identity</strong>.
+                    </p>
+                </div>
+
+                <div style="margin-top: 16px; padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: #92400e; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">warning</span>
+                        Quan trọng cho Backup
+                    </h4>
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                        Nếu backup không hoạt động, hãy đảm bảo <strong>Windows Identity</strong> (Application Pool Identity) có quyền:
+                        <ul style="margin: 8px 0 0 20px; color: #92400e;">
+                            <li>Quyền <strong>BACKUP DATABASE</strong> trong SQL Server</li>
+                            <li>Quyền <strong>Write</strong> vào thư mục backup</li>
+                            <li>Quyền <strong>Write</strong> vào thư mục uploads (nếu backup files)</li>
+                        </ul>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

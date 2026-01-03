@@ -14,6 +14,7 @@ namespace DMS.Controllers
         private readonly IUserService _userService;
         private readonly IAdminService _adminService;
         private readonly ICourseService _courseService;
+        private readonly IBackupService _backupService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
@@ -22,6 +23,7 @@ namespace DMS.Controllers
             IUserService userService,
             IAdminService adminService,
             ICourseService courseService,
+            IBackupService backupService,
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext context,
             IWebHostEnvironment environment)
@@ -29,6 +31,7 @@ namespace DMS.Controllers
             _userService = userService;
             _adminService = adminService;
             _courseService = courseService;
+            _backupService = backupService;
             _userManager = userManager;
             _context = context;
             _environment = environment;
@@ -283,18 +286,125 @@ namespace DMS.Controllers
         }
 
         // Backup
-        public IActionResult Backup()
+        public async Task<IActionResult> Backup()
         {
+            var backups = await _backupService.GetAllBackupsAsync();
+            ViewBag.Backups = backups;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult PerformBackup()
+        public async Task<IActionResult> PerformBackup(string? description)
         {
-            // TODO: Implement backup service when backup functionality is needed
-            TempData["Message"] = "Backup đã được thực hiện thành công!";
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy người dùng";
+                return RedirectToAction("Backup");
+            }
+
+            var (success, errorMessage, backupRecord) = await _backupService.CreateBackupAsync(user.Id, description);
+            
+            if (success && backupRecord != null)
+            {
+                // Log activity
+                await _adminService.LogActivityAsync(
+                    "Backup",
+                    "System",
+                    null,
+                    $"Đã tạo backup: {backupRecord.BackupName}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+                
+                TempData["SuccessMessage"] = $"Backup đã được tạo thành công! Tên: {backupRecord.BackupName}";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = errorMessage ?? "Không thể tạo backup";
+            }
+            
             return RedirectToAction("Backup");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreBackup(int backupId, string? restoreNotes)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy người dùng" });
+            }
+
+            var (success, errorMessage) = await _backupService.RestoreBackupAsync(backupId, user.Id, restoreNotes);
+            
+            if (success)
+            {
+                // Log activity
+                var backup = await _backupService.GetBackupByIdAsync(backupId);
+                if (backup != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Restore",
+                        "System",
+                        null,
+                        $"Đã restore backup: {backup.BackupName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
+                TempData["SuccessMessage"] = "Restore backup thành công!";
+                return Json(new { success = true, message = "Restore thành công" });
+            }
+            else
+            {
+                return Json(new { success = false, message = errorMessage ?? "Không thể restore backup" });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteBackup(int backupId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy người dùng" });
+            }
+
+            var backup = await _backupService.GetBackupByIdAsync(backupId);
+            if (backup == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy backup" });
+            }
+
+            var success = await _backupService.DeleteBackupAsync(backupId);
+            
+            if (success)
+            {
+                // Log activity
+                await _adminService.LogActivityAsync(
+                    "DeleteBackup",
+                    "System",
+                    null,
+                    $"Đã xóa backup: {backup.BackupName}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+                
+                TempData["SuccessMessage"] = "Đã xóa backup thành công";
+                return Json(new { success = true, message = "Đã xóa backup thành công" });
+            }
+            else
+            {
+                return Json(new { success = false, message = "Không thể xóa backup" });
+            }
         }
 
         // Clean All Sample Data - Remove all documents and folders
@@ -652,6 +762,124 @@ namespace DMS.Controllers
             }
 
             return RedirectToAction("DocumentManagement");
+        }
+
+        // System Info - Hiển thị thông tin user IIS và process
+        public IActionResult SystemInfo()
+        {
+            var info = new Dictionary<string, string>();
+
+            // Windows Identity
+            try
+            {
+                var windowsIdentity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                info["Windows Identity Name"] = windowsIdentity?.Name ?? "N/A";
+                info["Windows Identity IsAuthenticated"] = windowsIdentity?.IsAuthenticated.ToString() ?? "N/A";
+                info["Windows Identity AuthenticationType"] = windowsIdentity?.AuthenticationType ?? "N/A";
+            }
+            catch (Exception ex)
+            {
+                info["Windows Identity Error"] = ex.Message;
+            }
+
+            // Process Information
+            try
+            {
+                var process = System.Diagnostics.Process.GetCurrentProcess();
+                info["Process Name"] = process.ProcessName;
+                info["Process ID"] = process.Id.ToString();
+                info["Process Start Time"] = process.StartTime.ToString("yyyy-MM-dd HH:mm:ss");
+                info["Process User Name"] = process.StartInfo?.UserName ?? "N/A";
+                
+                // Lấy username từ process
+                try
+                {
+                    var processStartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "whoami",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        CreateNoWindow = true
+                    };
+                    using (var proc = System.Diagnostics.Process.Start(processStartInfo))
+                    {
+                        if (proc != null)
+                        {
+                            info["Current User (whoami)"] = proc.StandardOutput.ReadToEnd().Trim();
+                        }
+                    }
+                }
+                catch { }
+
+                // Lấy thông tin từ Environment
+                info["Environment UserName"] = Environment.UserName;
+                info["Environment UserDomainName"] = Environment.UserDomainName;
+                info["Environment MachineName"] = Environment.MachineName;
+            }
+            catch (Exception ex)
+            {
+                info["Process Error"] = ex.Message;
+            }
+
+            // IIS Application Pool Info (nếu có)
+            try
+            {
+                var appPoolId = Environment.GetEnvironmentVariable("APP_POOL_ID");
+                if (!string.IsNullOrEmpty(appPoolId))
+                {
+                    info["IIS Application Pool ID"] = appPoolId;
+                }
+
+                var appPoolName = Environment.GetEnvironmentVariable("APP_POOL_NAME");
+                if (!string.IsNullOrEmpty(appPoolName))
+                {
+                    info["IIS Application Pool Name"] = appPoolName;
+                }
+            }
+            catch { }
+
+            // Environment Variables liên quan đến IIS
+            try
+            {
+                var iisAppPath = Environment.GetEnvironmentVariable("IIS_APP_PATH");
+                if (!string.IsNullOrEmpty(iisAppPath))
+                {
+                    info["IIS App Path"] = iisAppPath;
+                }
+
+                var iisSiteName = Environment.GetEnvironmentVariable("IIS_SITE_NAME");
+                if (!string.IsNullOrEmpty(iisSiteName))
+                {
+                    info["IIS Site Name"] = iisSiteName;
+                }
+            }
+            catch { }
+
+            // ASP.NET Core Environment
+            info["ASPNETCORE_ENVIRONMENT"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Not set";
+            info["Content Root Path"] = _environment.ContentRootPath;
+            info["Web Root Path"] = _environment.WebRootPath;
+            info["Environment Name"] = _environment.EnvironmentName;
+
+            // HTTP Context Info
+            try
+            {
+                if (HttpContext != null)
+                {
+                    info["Request Scheme"] = HttpContext.Request.Scheme;
+                    info["Request Host"] = HttpContext.Request.Host.ToString();
+                    info["IsAuthenticated"] = HttpContext.User?.Identity?.IsAuthenticated.ToString() ?? "N/A";
+                    info["Authentication Type"] = HttpContext.User?.Identity?.AuthenticationType ?? "N/A";
+                    info["User Name"] = HttpContext.User?.Identity?.Name ?? "N/A";
+                }
+            }
+            catch (Exception ex)
+            {
+                info["HTTP Context Error"] = ex.Message;
+            }
+
+            ViewBag.SystemInfo = info;
+            return View();
         }
     }
 }

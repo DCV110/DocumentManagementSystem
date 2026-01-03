@@ -149,6 +149,65 @@ namespace DMS.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("DMS.Models.BackupRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BackupName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DatabaseBackupPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("DatabaseSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("FilesBackupPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FilesSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsRestored")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RestoreNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RestoredBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RestoredDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.ToTable("BackupRecords");
+                });
+
             modelBuilder.Entity("DMS.Models.Course", b =>
                 {
                     b.Property<int>("Id")
@@ -496,6 +555,17 @@ namespace DMS.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DMS.Models.BackupRecord", b =>
+                {
+                    b.HasOne("DMS.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("DMS.Models.Course", b =>

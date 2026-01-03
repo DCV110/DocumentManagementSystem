@@ -72,6 +72,10 @@
             <span class="material-symbols-outlined">backup</span>
             <span>Sao lưu</span>
         </a>
+        <a href="@Url.Action("SystemInfo", "Admin")" class="nav-item @(currentAction == "SystemInfo" && currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">info</span>
+            <span>Thông tin hệ thống</span>
+        </a>
     </nav>
 
     <!-- Footer -->

@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = "Sao lưu dữ liệu";
     Layout = "_SidebarLayout";
+    var backups = ViewBag.Backups as List<DMS.Models.BackupRecord> ?? new List<DMS.Models.BackupRecord>();
 }
 
 <partial name="_AdminSidebar" />
@@ -27,30 +28,227 @@
                 <h3 style="margin-bottom: 16px;">Thực hiện sao lưu</h3>
                 <p style="color: #6b7280; margin-bottom: 24px;">Sao lưu toàn bộ dữ liệu database và files tài liệu</p>
                 
-                <form method="post" action="@Url.Action("PerformBackup", "Admin")">
+                <form method="post" action="@Url.Action("PerformBackup", "Admin")" id="backupForm">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Mô tả (tùy chọn)</label>
+                        <textarea name="description" rows="3" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; resize: vertical;" placeholder="Nhập mô tả cho bản backup này..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;" id="backupBtn">
                         <span class="material-symbols-outlined">backup</span>
                         Thực hiện sao lưu ngay
                     </button>
                 </form>
 
-                @if (TempData["Message"] != null)
+                @if (TempData["SuccessMessage"] != null)
                 {
                     <div style="margin-top: 16px; padding: 12px; background: #dcfce7; color: #16a34a; border-radius: 8px;">
-                        @TempData["Message"]
+                        @TempData["SuccessMessage"]
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div style="margin-top: 16px; padding: 12px; background: #fee2e2; color: #dc2626; border-radius: 8px;">
+                        @TempData["ErrorMessage"]
                     </div>
                 }
             </div>
 
             <div class="form-section" style="margin-top: 32px;">
                 <h3 style="margin-bottom: 16px;">Lịch sử sao lưu</h3>
-                <div class="empty-state">
-                    <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af;">history</span>
-                    <p>Chưa có bản sao lưu nào</p>
-                </div>
+                
+                @if (backups.Any())
+                {
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <thead>
+                                <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px;">Tên backup</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px;">Ngày tạo</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px;">Người tạo</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px;">Kích thước</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 14px;">Trạng thái</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; font-size: 14px;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var backup in backups)
+                                {
+                                    var totalSize = backup.DatabaseSize + backup.FilesSize;
+                                    var sizeInMB = totalSize / (1024.0 * 1024.0);
+                                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                                        <td style="padding: 12px;">
+                                            <div style="font-weight: 500; color: #111827;">@backup.BackupName</div>
+                                            @if (!string.IsNullOrEmpty(backup.Description))
+                                            {
+                                                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">@backup.Description</div>
+                                            }
+                                        </td>
+                                        <td style="padding: 12px; color: #6b7280; font-size: 14px;">
+                                            @backup.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                        </td>
+                                        <td style="padding: 12px; color: #6b7280; font-size: 14px;">
+                                            @(backup.CreatedByUser?.FullName ?? "N/A")
+                                        </td>
+                                        <td style="padding: 12px; color: #6b7280; font-size: 14px;">
+                                            @sizeInMB.ToString("F2") MB
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            @if (backup.IsRestored)
+                                            {
+                                                <span style="display: inline-flex; align-items: center; padding: 4px 12px; background: #dbeafe; color: #1e40af; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                                    <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px;">check_circle</span>
+                                                    Đã restore
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span style="display: inline-flex; align-items: center; padding: 4px 12px; background: #dcfce7; color: #16a34a; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                                    <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px;">backup</span>
+                                                    Sẵn sàng
+                                                </span>
+                                            }
+                                        </td>
+                                        <td style="padding: 12px; text-align: center;">
+                                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                                @if (!backup.IsRestored)
+                                                {
+                                                    <button onclick="openRestoreModal(@backup.Id, '@backup.BackupName')" 
+                                                            style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                                        <span class="material-symbols-outlined" style="font-size: 16px;">restore</span>
+                                                        Restore
+                                                    </button>
+                                                }
+                                                <button onclick="deleteBackup(@backup.Id, '@backup.BackupName')" 
+                                                        style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <span class="material-symbols-outlined" style="font-size: 16px;">delete</span>
+                                                    Xóa
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af;">history</span>
+                        <p>Chưa có bản sao lưu nào</p>
+                    </div>
+                }
             </div>
         </div>
     </div>
 </div>
 
+<!-- Restore Modal -->
+<div id="restoreModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 20px;">Xác nhận restore</h3>
+        <p style="color: #6b7280; margin-bottom: 16px;">Bạn có chắc chắn muốn restore backup <strong id="restoreBackupName"></strong>? Thao tác này sẽ thay thế toàn bộ dữ liệu hiện tại.</p>
+        <form id="restoreForm" method="post" action="@Url.Action("RestoreBackup", "Admin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="backupId" id="restoreBackupId" />
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #374151;">Ghi chú (tùy chọn)</label>
+                <textarea name="restoreNotes" rows="3" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; resize: vertical;" placeholder="Nhập ghi chú cho lần restore này..."></textarea>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" onclick="closeRestoreModal()" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Hủy
+                </button>
+                <button type="submit" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Xác nhận restore
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Backup form submission
+    document.getElementById('backupForm')?.addEventListener('submit', function(e) {
+        const btn = document.getElementById('backupBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Đang tạo backup...';
+        }
+    });
+
+    // Restore Modal
+    function openRestoreModal(backupId, backupName) {
+        document.getElementById('restoreBackupId').value = backupId;
+        document.getElementById('restoreBackupName').textContent = backupName;
+        document.getElementById('restoreModal').style.display = 'flex';
+    }
+
+    function closeRestoreModal() {
+        document.getElementById('restoreModal').style.display = 'none';
+        document.getElementById('restoreForm').reset();
+    }
+
+    // Restore form submission
+    document.getElementById('restoreForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+        const btn = form.querySelector('button[type="submit"]');
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Đang restore...';
+        }
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Restore thành công! Trang sẽ được tải lại.');
+                window.location.reload();
+            } else {
+                alert('Lỗi: ' + data.message);
+                if (btn) btn.disabled = false;
+                if (btn) btn.textContent = 'Xác nhận restore';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra khi restore');
+            if (btn) btn.disabled = false;
+            if (btn) btn.textContent = 'Xác nhận restore';
+        });
+    });
+
+    // Delete Backup
+    function deleteBackup(backupId, backupName) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa backup "${backupName}"? Thao tác này không thể hoàn tác.`)) {
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '@Url.Action("DeleteBackup", "Admin")';
+        
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const tokenInput = document.createElement('input');
+        tokenInput.type = 'hidden';
+        tokenInput.name = '__RequestVerificationToken';
+        tokenInput.value = token;
+        form.appendChild(tokenInput);
+
+        const idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'backupId';
+        idInput.value = backupId;
+        form.appendChild(idInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
