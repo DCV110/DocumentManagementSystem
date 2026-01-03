@@ -1,0 +1,639 @@
+@{
+    ViewData["Title"] = "Quản lý tài liệu";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<partial name="_AdminSidebar" />
+
+@Html.AntiForgeryToken()
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Quản lý tài liệu</h1>
+            <p>Quản lý tất cả tài liệu trong hệ thống</p>
+        </div>
+        <div class="header-actions">
+            <button class="notification-icon">
+                <span class="material-symbols-outlined">notifications</span>
+                <span class="notification-dot"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <!-- Search and Filters -->
+        <div class="search-filter-section">
+            <form method="get" action="@Url.Action("DocumentManagement", "Admin")" style="flex: 1;">
+                <div class="search-box-large">
+                    <span class="material-symbols-outlined search-icon-large">search</span>
+                    <input type="text" name="search" class="search-input-large" placeholder="Tìm kiếm tài liệu..." value="@ViewBag.Search" />
+                </div>
+            </form>
+            <div class="filter-buttons">
+                <a href="@Url.Action("DocumentManagement", "Admin")" class="filter-btn @(ViewBag.Status == null ? "active" : "")">Tất cả</a>
+                <a href="@Url.Action("DocumentManagement", "Admin", new { status = "Pending" })" class="filter-btn @(ViewBag.Status == "Pending" ? "active" : "")">Chờ duyệt</a>
+                <a href="@Url.Action("DocumentManagement", "Admin", new { status = "Approved" })" class="filter-btn @(ViewBag.Status == "Approved" ? "active" : "")">Đã duyệt</a>
+                <a href="@Url.Action("DocumentManagement", "Admin", new { status = "Rejected" })" class="filter-btn @(ViewBag.Status == "Rejected" ? "active" : "")">Đã từ chối</a>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div style="background: white; border: 1px solid #dbe0e6; border-radius: 8px; padding: 16px; margin-bottom: 16px; display: none;" id="bulkActionsPanel">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <span id="selectedCount" style="font-weight: 600; color: #0959aa;">0 tài liệu được chọn</span>
+                <button onclick="bulkApprove()" class="btn" style="background: #16a34a; color: white;">Phê duyệt</button>
+                <button onclick="bulkReject()" class="btn" style="background: #dc2626; color: white;">Từ chối</button>
+                <button onclick="bulkDelete()" class="btn" style="background: #dc2626; color: white;">Xóa</button>
+                <button onclick="clearSelection()" class="btn" style="background: #6b7280; color: white;">Bỏ chọn</button>
+            </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="documents-table-container">
+            <table class="documents-table-modern">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" />
+                        </th>
+                        <th>Tài liệu</th>
+                        <th>Người tạo</th>
+                        <th>Khóa học</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tải lên</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (ViewBag.Documents != null)
+                    {
+                        var documents = ViewBag.Documents as List<DMS.Models.Document>;
+                        @if (documents != null && documents.Any())
+                        {
+                            @foreach (var doc in documents)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="document-checkbox" value="@doc.Id" onchange="updateBulkActions()" />
+                                    </td>
+                                    <td>
+                                        <div class="document-item">
+                                            <div class="document-icon blue">
+                                                <span class="material-symbols-outlined">description</span>
+                                            </div>
+                                            <div class="document-item-info">
+                                                <h5>@doc.Title</h5>
+                                                <p>@(doc.FileName ?? "") - @(doc.FileSize / 1024) KB</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="document-item">
+                                            <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@(doc.User?.FullName ?? "User")&background=16a34a&color=fff')"></div>
+                                            <div class="document-item-info">
+                                                <h5>@(doc.User?.FullName ?? "Người dùng")</h5>
+                                                <p>@(doc.User?.Email ?? "")</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="color: #6b7280;">
+                                        @(doc.Course?.CourseName ?? "-")
+                                    </td>
+                                    <td>
+                                        @if (doc.Status == DMS.Models.DocumentStatus.Pending)
+                                        {
+                                            <span class="status-badge blue">Chờ duyệt</span>
+                                        }
+                                        else if (doc.Status == DMS.Models.DocumentStatus.Approved)
+                                        {
+                                            <span class="status-badge" style="background: #f0fdf4; color: #16a34a; border-color: rgba(22, 163, 74, 0.2);">Đã duyệt</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge" style="background: #fef2f2; color: #dc2626; border-color: rgba(220, 38, 38, 0.2);">Đã từ chối</span>
+                                        }
+                                    </td>
+                                    <td style="color: #6b7280; font-size: 14px;">
+                                        @doc.UploadDate.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons-group">
+                                            @{
+                                                var returnUrl = Url.Action("DocumentManagement", "Admin", new { search = ViewBag.Search, courseId = ViewBag.CourseId, status = ViewBag.Status, userId = ViewBag.UserId, page = ViewBag.Page });
+                                            }
+                                            <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="btn-icon" title="Xem">
+                                                <span class="material-symbols-outlined">visibility</span>
+                                            </a>
+                                            <a href="@Url.Action("Edit", "Document", new { id = doc.Id, returnUrl = returnUrl })" class="btn-icon" title="Sửa">
+                                                <span class="material-symbols-outlined">edit</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 48px;">
+                                    <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">inbox</span>
+                                    <p style="color: #6b7280; margin: 0;">Không tìm thấy tài liệu</p>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (ViewBag.TotalPages != null && ViewBag.TotalPages > 1)
+        {
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;">
+                @if (ViewBag.Page > 1)
+                {
+                    <a href="@Url.Action("DocumentManagement", "Admin", new { search = ViewBag.Search, courseId = ViewBag.CourseId, status = ViewBag.Status, userId = ViewBag.UserId, page = ViewBag.Page - 1 })" 
+                       class="btn" style="padding: 8px 16px;">Trước</a>
+                }
+                
+                @for (int i = Math.Max(1, ViewBag.Page - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.Page + 2); i++)
+                {
+                    <a href="@Url.Action("DocumentManagement", "Admin", new { search = ViewBag.Search, courseId = ViewBag.CourseId, status = ViewBag.Status, userId = ViewBag.UserId, page = i })" 
+                       class="btn @(i == ViewBag.Page ? "btn-primary" : "")" style="padding: 8px 16px;">@i</a>
+                }
+                
+                @if (ViewBag.Page < ViewBag.TotalPages)
+                {
+                    <a href="@Url.Action("DocumentManagement", "Admin", new { search = ViewBag.Search, courseId = ViewBag.CourseId, status = ViewBag.Status, userId = ViewBag.UserId, page = ViewBag.Page + 1 })" 
+                       class="btn" style="padding: 8px 16px;">Sau</a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modern Confirm Modal -->
+<div id="confirmModal" class="modern-modal" style="display: none;">
+    <div class="modern-modal-overlay" onclick="closeConfirmModal()"></div>
+    <div class="modern-modal-content">
+        <div class="modern-modal-header">
+            <div class="modern-modal-icon" id="confirmModalIcon">
+                <span class="material-symbols-outlined">warning</span>
+            </div>
+            <h3 id="confirmModalTitle">Xác nhận</h3>
+            <button class="modern-modal-close" onclick="closeConfirmModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="modern-modal-body">
+            <p id="confirmModalMessage"></p>
+        </div>
+        <div class="modern-modal-footer">
+            <button class="modern-modal-btn modern-modal-btn-cancel" onclick="closeConfirmModal()">Hủy</button>
+            <button class="modern-modal-btn modern-modal-btn-confirm" id="confirmModalOkBtn">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Prompt Modal -->
+<div id="promptModal" class="modern-modal" style="display: none;">
+    <div class="modern-modal-overlay" onclick="closePromptModal()"></div>
+    <div class="modern-modal-content">
+        <div class="modern-modal-header">
+            <div class="modern-modal-icon" style="background: #fef3c7; color: #f59e0b;">
+                <span class="material-symbols-outlined">edit</span>
+            </div>
+            <h3 id="promptModalTitle">Nhập thông tin</h3>
+            <button class="modern-modal-close" onclick="closePromptModal()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="modern-modal-body">
+            <p id="promptModalMessage" style="margin-bottom: 16px;"></p>
+            <textarea id="promptModalInput" class="modern-modal-input" rows="4" placeholder="Nhập thông tin..."></textarea>
+        </div>
+        <div class="modern-modal-footer">
+            <button class="modern-modal-btn modern-modal-btn-cancel" onclick="closePromptModal()">Hủy</button>
+            <button class="modern-modal-btn modern-modal-btn-confirm" id="promptModalOkBtn">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.modern-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modern-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: modalSlideIn 0.3s ease-out;
+    z-index: 1;
+}
+
+@@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modern-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modern-modal-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fef2f2;
+    color: #dc2626;
+    flex-shrink: 0;
+}
+
+.modern-modal-icon .material-symbols-outlined {
+    font-size: 24px;
+}
+
+.modern-modal-header h3 {
+    flex: 1;
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0;
+}
+
+.modern-modal-close {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.modern-modal-close:hover {
+    background: #f3f4f6;
+    color: #111418;
+}
+
+.modern-modal-body {
+    padding: 24px;
+}
+
+.modern-modal-body p {
+    margin: 0;
+    font-size: 15px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+.modern-modal-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    color: #111418;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.modern-modal-input:focus {
+    outline: none;
+    border-color: #0959aa;
+    box-shadow: 0 0 0 3px rgba(9, 89, 170, 0.1);
+}
+
+.modern-modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.modern-modal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modern-modal-btn-cancel {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.modern-modal-btn-cancel:hover {
+    background: #f9fafb;
+    color: #111418;
+    border-color: #9ca3af;
+}
+
+.modern-modal-btn-confirm {
+    background: #0959aa;
+    color: white;
+}
+
+.modern-modal-btn-confirm:hover {
+    background: #075985;
+}
+
+.modern-modal-btn-confirm.danger {
+    background: #dc2626;
+}
+
+.modern-modal-btn-confirm.danger:hover {
+    background: #b91c1c;
+}
+
+.modern-modal-btn-confirm.success {
+    background: #16a34a;
+}
+
+.modern-modal-btn-confirm.success:hover {
+    background: #15803d;
+}
+</style>
+
+<script>
+let confirmCallback = null;
+let promptCallback = null;
+
+function showConfirmModal(title, message, type = 'warning', onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const icon = document.getElementById('confirmModalIcon');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const messageEl = document.getElementById('confirmModalMessage');
+    const okBtn = document.getElementById('confirmModalOkBtn');
+    
+    titleEl.textContent = title || 'Xác nhận';
+    messageEl.innerHTML = message;
+    confirmCallback = onConfirm;
+    
+    // Set icon and button style based on type
+    if (type === 'danger') {
+        icon.style.background = '#fef2f2';
+        icon.style.color = '#dc2626';
+        icon.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+        okBtn.className = 'modern-modal-btn modern-modal-btn-confirm danger';
+    } else if (type === 'success') {
+        icon.style.background = '#dcfce7';
+        icon.style.color = '#16a34a';
+        icon.innerHTML = '<span class="material-symbols-outlined">check_circle</span>';
+        okBtn.className = 'modern-modal-btn modern-modal-btn-confirm success';
+    } else {
+        icon.style.background = '#fef3c7';
+        icon.style.color = '#f59e0b';
+        icon.innerHTML = '<span class="material-symbols-outlined">warning</span>';
+        okBtn.className = 'modern-modal-btn modern-modal-btn-confirm';
+    }
+    
+    okBtn.onclick = function() {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        closeConfirmModal();
+    };
+    
+    modal.style.display = 'flex';
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.style.display = 'none';
+    confirmCallback = null;
+}
+
+function showPromptModal(title, message, placeholder, onConfirm) {
+    const modal = document.getElementById('promptModal');
+    const titleEl = document.getElementById('promptModalTitle');
+    const messageEl = document.getElementById('promptModalMessage');
+    const inputEl = document.getElementById('promptModalInput');
+    const okBtn = document.getElementById('promptModalOkBtn');
+    
+    titleEl.textContent = title || 'Nhập thông tin';
+    messageEl.textContent = message;
+    inputEl.placeholder = placeholder || 'Nhập thông tin...';
+    inputEl.value = '';
+    promptCallback = onConfirm;
+    
+    okBtn.onclick = function() {
+        const value = inputEl.value.trim();
+        if (value && promptCallback) {
+            promptCallback(value);
+        }
+        closePromptModal();
+    };
+    
+    modal.style.display = 'flex';
+    setTimeout(() => inputEl.focus(), 100);
+}
+
+function closePromptModal() {
+    const modal = document.getElementById('promptModal');
+    modal.style.display = 'none';
+    promptCallback = null;
+}
+
+// Close modals on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+        closePromptModal();
+    }
+});
+
+function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.document-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkActions();
+    }
+
+    function updateBulkActions() {
+        const checked = document.querySelectorAll('.document-checkbox:checked');
+        const panel = document.getElementById('bulkActionsPanel');
+        const count = document.getElementById('selectedCount');
+        
+        if (checked.length > 0) {
+            panel.style.display = 'block';
+            count.textContent = checked.length + ' tài liệu được chọn';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    function clearSelection() {
+        document.querySelectorAll('.document-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('selectAll').checked = false;
+        updateBulkActions();
+    }
+
+    function getSelectedIds() {
+        const checked = document.querySelectorAll('.document-checkbox:checked');
+        return Array.from(checked).map(cb => parseInt(cb.value));
+    }
+
+    function bulkApprove() {
+        const ids = getSelectedIds();
+        if (ids.length === 0) return;
+        
+        showConfirmModal(
+            'Phê duyệt tài liệu',
+            'Bạn có chắc muốn phê duyệt ' + ids.length + ' tài liệu?',
+            'success',
+            function() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("BulkApproveDocuments", "Admin")';
+                
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'documentIds';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        );
+    }
+
+    function bulkReject() {
+        const ids = getSelectedIds();
+        if (ids.length === 0) return;
+        
+        showPromptModal(
+            'Từ chối tài liệu',
+            'Nhập lý do từ chối cho ' + ids.length + ' tài liệu:',
+            'Ví dụ: Nội dung không phù hợp, vi phạm quy định...',
+            function(reason) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("BulkRejectDocuments", "Admin")';
+                
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                const reasonInput = document.createElement('input');
+                reasonInput.type = 'hidden';
+                reasonInput.name = 'reason';
+                reasonInput.value = reason;
+                form.appendChild(reasonInput);
+                
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'documentIds';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        );
+    }
+
+    function bulkDelete() {
+        const ids = getSelectedIds();
+        if (ids.length === 0) return;
+        
+        showConfirmModal(
+            'Xóa tài liệu',
+            'Bạn có chắc muốn xóa ' + ids.length + ' tài liệu?<br><strong style="color: #dc2626;">Hành động này không thể hoàn tác!</strong>',
+            'danger',
+            function() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("BulkDeleteDocuments", "Admin")';
+                
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'documentIds';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        );
+    }
+</script>
+

@@ -282,7 +282,7 @@ namespace DMS.Services
         {
             var query = _context.Documents
                 .Include(d => d.Course)
-                .ThenInclude(c => c.Instructor!)
+                    .ThenInclude(c => c.Instructor)
                 .Include(d => d.User)
                 .Where(d => !d.IsDeleted && d.Status == DocumentStatus.Approved && 
                     (d.CourseId != null || (d.IsPublicShared && d.PublicShareApproved)))

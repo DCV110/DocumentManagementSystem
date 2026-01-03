@@ -695,6 +695,7 @@ else
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="documentId" id="shareDocumentId" />
                 <input type="hidden" name="folderId" id="shareFolderId" style="display: none;" />
+                <input type="hidden" name="returnUrl" id="shareReturnUrl" />
                 
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
@@ -1589,6 +1590,18 @@ else
                 shareForm.querySelector('input[name="folderId"]').style.display = 'none';
                 shareModal.querySelector('h2').textContent = 'Chia sẻ tài liệu';
                 if (shareItemLabel) shareItemLabel.textContent = 'Tài liệu';
+                
+                // Set returnUrl to current page (with folderId if in folder)
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentFolderId = urlParams.get('folderId');
+                const shareReturnUrl = document.getElementById('shareReturnUrl');
+                if (shareReturnUrl) {
+                    if (currentFolderId) {
+                        shareReturnUrl.value = '@Url.Action("MyDocuments", "Home")?folderId=' + currentFolderId;
+                    } else {
+                        shareReturnUrl.value = '@Url.Action("MyDocuments", "Home")';
+                    }
+                }
                 
                 // Reset share type to 'course'
                 const courseRadio = document.getElementById('shareTypeCourse');

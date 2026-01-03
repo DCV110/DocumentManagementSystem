@@ -76,6 +76,10 @@ else
                 <!-- Edit Form -->
                 <form method="post" action="@Url.Action("Edit", "Document", new { id = document.Id })">
                     @Html.AntiForgeryToken()
+                    @if (ViewBag.ReturnUrl != null)
+                    {
+                        <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+                    }
                     
                     <div style="margin-bottom: 20px;">
                         <label for="title" style="display: block; font-size: 14px; font-weight: 600; color: #111418; margin-bottom: 8px;">
@@ -121,9 +125,18 @@ else
 
                     <!-- Action Buttons -->
                     <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-                        <a href="@Url.Action("MyDocuments", "Home")" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; text-decoration: none; transition: all 0.2s;">
-                            Hủy
-                        </a>
+                        @if (ViewBag.ReturnUrl != null)
+                        {
+                            <a href="@ViewBag.ReturnUrl" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; text-decoration: none; transition: all 0.2s;">
+                                Hủy
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("MyDocuments", "Home")" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; text-decoration: none; transition: all 0.2s;">
+                                Hủy
+                            </a>
+                        }
                         <button type="submit" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0959aa; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                             <span class="material-symbols-outlined" style="font-size: 20px;">save</span>
                             Lưu thay đổi

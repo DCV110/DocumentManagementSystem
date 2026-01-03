@@ -51,15 +51,97 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 48px;">
-                            <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">description</span>
-                            <p style="color: #6b7280; margin: 0;">Chức năng đang được phát triển</p>
-                        </td>
-                    </tr>
+                    @{
+                        var logs = ViewBag.Logs as List<DMS.Models.AuditLog>;
+                        // Debug info
+                        var debugInfo = $"Logs: {(logs != null ? logs.Count.ToString() : "null")}, TotalCount: {ViewBag.TotalCount ?? 0}";
+                    }
+                    @if (logs != null && logs.Any())
+                        {
+                            @foreach (var log in logs)
+                            {
+                                <tr>
+                                    <td style="color: #6b7280; font-size: 14px;">
+                                        @log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+                                    </td>
+                                    <td>
+                                        <div class="document-item">
+                                            <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@(log.User?.FullName ?? "User")&background=16a34a&color=fff')"></div>
+                                            <div class="document-item-info">
+                                                <h5>@(log.User?.FullName ?? "Người dùng")</h5>
+                                                <p>@(log.User?.Email ?? "")</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge @(log.Action == "Delete" ? "red" : log.Action == "Approve" ? "green" : "blue")">
+                                            @log.Action
+                                        </span>
+                                    </td>
+                                    <td style="color: #6b7280;">
+                                        @if (!string.IsNullOrEmpty(log.EntityType))
+                                        {
+                                            <span>@log.EntityType</span>
+                                            @if (log.EntityId.HasValue)
+                                            {
+                                                <span> #@log.EntityId</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                    <td style="color: #6b7280; font-size: 14px;">
+                                        @(log.Description ?? "-")
+                                    </td>
+                                </tr>
+                            }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 48px;">
+                                <span class="material-symbols-outlined" style="font-size: 48px; color: #9ca3af; margin-bottom: 16px;">inbox</span>
+                                <p style="color: #6b7280; margin: 0;">Chưa có nhật ký hoạt động</p>
+                                @if (ViewBag.TotalCount != null)
+                                {
+                                    <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 12px;">Tổng số (sau lọc): @ViewBag.TotalCount</p>
+                                }
+                                @if (ViewBag.DirectCount != null && (int)ViewBag.DirectCount > 0)
+                                {
+                                    <p style="color: #dc2626; margin: 8px 0 0 0; font-size: 12px;">Tổng số trong DB: @ViewBag.DirectCount (Có thể đang bị lọc)</p>
+                                }
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        @if (ViewBag.TotalPages != null && ViewBag.TotalPages > 1)
+        {
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;">
+                @if (ViewBag.Page > 1)
+                {
+                    <a href="@Url.Action("AuditLog", "Admin", new { userId = ViewBag.UserId, action = ViewBag.Action, fromDate = ViewBag.FromDate, toDate = ViewBag.ToDate, page = ViewBag.Page - 1 })" 
+                       class="btn" style="padding: 8px 16px;">Trước</a>
+                }
+                
+                @for (int i = Math.Max(1, ViewBag.Page - 2); i <= Math.Min(ViewBag.TotalPages, ViewBag.Page + 2); i++)
+                {
+                    <a href="@Url.Action("AuditLog", "Admin", new { userId = ViewBag.UserId, action = ViewBag.Action, fromDate = ViewBag.FromDate, toDate = ViewBag.ToDate, page = i })" 
+                       class="btn @(i == ViewBag.Page ? "btn-primary" : "")" style="padding: 8px 16px;">@i</a>
+                }
+                
+                @if (ViewBag.Page < ViewBag.TotalPages)
+                {
+                    <a href="@Url.Action("AuditLog", "Admin", new { userId = ViewBag.UserId, action = ViewBag.Action, fromDate = ViewBag.FromDate, toDate = ViewBag.ToDate, page = ViewBag.Page + 1 })" 
+                       class="btn" style="padding: 8px 16px;">Sau</a>
+                }
+            </div>
+        }
     </div>
 </div>
 

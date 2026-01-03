@@ -18,6 +18,7 @@ namespace DMS.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _environment;
         private readonly ApplicationDbContext _context;
+        private readonly IAdminService _adminService;
 
         public DocumentController(
             IDocumentService documentService,
@@ -25,7 +26,8 @@ namespace DMS.Controllers
             ICourseService courseService,
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment environment,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IAdminService adminService)
         {
             _documentService = documentService;
             _folderService = folderService;
@@ -33,6 +35,7 @@ namespace DMS.Controllers
             _userManager = userManager;
             _environment = environment;
             _context = context;
+            _adminService = adminService;
         }
 
         // Upload Document - Redirect to MyDocuments (upload is now integrated there)
@@ -156,6 +159,7 @@ namespace DMS.Controllers
         [HttpGet]
         public async Task<IActionResult> Preview(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
             var document = await _documentService.GetDocumentWithDetailsAsync(id);
 
             if (document == null)
@@ -165,6 +169,20 @@ namespace DMS.Controllers
 
             // Increment view count
             await _documentService.IncrementViewCountAsync(id);
+
+            // Log activity
+            if (user != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "View", 
+                    "Document", 
+                    id, 
+                    $"Đã xem tài liệu: {document.Title}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
 
             // Get ZIP contents if file is ZIP
             List<ZipEntryInfo>? zipContents = null;
@@ -189,6 +207,8 @@ namespace DMS.Controllers
         [HttpGet]
         public async Task<IActionResult> Download(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var document = await _documentService.GetDocumentByIdAsync(id);
             var result = await _documentService.DownloadDocumentAsync(id, _environment.WebRootPath);
             
             if (result == null)
@@ -198,6 +218,20 @@ namespace DMS.Controllers
 
             // Increment download count after successful download
             await _documentService.IncrementDownloadCountAsync(id);
+
+            // Log activity
+            if (user != null && document != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "Download", 
+                    "Document", 
+                    id, 
+                    $"Đã tải xuống tài liệu: {document.Title}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
 
             var (fileBytes, contentType, fileName) = result.Value;
             return File(fileBytes, contentType, fileName);
@@ -224,7 +258,25 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var document = await _documentService.GetDocumentByIdAsync(id);
+            
             await _documentService.ApproveDocumentAsync(id);
+            
+            // Log activity
+            if (user != null && document != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "Approve", 
+                    "Document", 
+                    id, 
+                    $"Đã phê duyệt tài liệu: {document.Title}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             return RedirectToAction("Approval");
         }
 
@@ -233,7 +285,25 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id, string reason)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var document = await _documentService.GetDocumentByIdAsync(id);
+            
             await _documentService.RejectDocumentAsync(id, reason);
+            
+            // Log activity
+            if (user != null && document != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "Reject", 
+                    "Document", 
+                    id, 
+                    $"Đã từ chối tài liệu: {document.Title}. Lý do: {reason}",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             return RedirectToAction("Approval");
         }
 
@@ -268,6 +338,20 @@ namespace DMS.Controllers
             var result = await _documentService.DeleteDocumentAsync(id, user.Id);
             if (result)
             {
+                // Log activity
+                if (document != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Delete", 
+                        "Document", 
+                        id, 
+                        $"Đã xóa tài liệu: {document.Title}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã xóa tài liệu thành công";
             }
             else
@@ -311,9 +395,24 @@ namespace DMS.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            var document = await _documentService.GetDocumentByIdAsync(id);
             var result = await _documentService.RestoreDocumentAsync(id);
             if (result)
             {
+                // Log activity
+                if (document != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Restore", 
+                        "Document", 
+                        id, 
+                        $"Đã khôi phục tài liệu: {document.Title}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã khôi phục tài liệu thành công";
             }
             else
@@ -355,6 +454,20 @@ namespace DMS.Controllers
             var result = await _documentService.DeletePermanentlyAsync(id, _environment.WebRootPath);
             if (result)
             {
+                // Log activity
+                if (document != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "DeletePermanently", 
+                        "Document", 
+                        id, 
+                        $"Đã xóa vĩnh viễn tài liệu: {document.Title}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã xóa vĩnh viễn tài liệu thành công";
             }
             else
@@ -368,7 +481,7 @@ namespace DMS.Controllers
         // Edit Document - Admin & Instructor
         [Authorize(Roles = "Admin,Instructor")]
         [HttpGet]
-        public async Task<IActionResult> Edit(int id)
+        public async Task<IActionResult> Edit(int id, string? returnUrl = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -380,7 +493,7 @@ namespace DMS.Controllers
             if (document == null || document.IsDeleted)
             {
                 TempData["ErrorMessage"] = "Không tìm thấy tài liệu";
-                return RedirectToAction("MyDocuments", "Home");
+                return RedirectToReturnUrl(returnUrl) ?? RedirectToAction("MyDocuments", "Home");
             }
 
             // Check permission: user can only edit their own documents unless they're admin
@@ -388,12 +501,13 @@ namespace DMS.Controllers
             if (!isAdmin && document.UserId != user.Id)
             {
                 TempData["ErrorMessage"] = "Bạn không có quyền chỉnh sửa tài liệu này";
-                return RedirectToAction("MyDocuments", "Home");
+                return RedirectToReturnUrl(returnUrl) ?? RedirectToAction("MyDocuments", "Home");
             }
 
             var folders = await _documentService.GetAllFoldersAsync();
             ViewBag.Document = document;
             ViewBag.Folders = folders;
+            ViewBag.ReturnUrl = returnUrl;
 
             return View();
         }
@@ -401,7 +515,7 @@ namespace DMS.Controllers
         [Authorize(Roles = "Admin,Instructor")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, string title, string? description, int? folderId)
+        public async Task<IActionResult> Edit(int id, string title, string? description, int? folderId, string? returnUrl = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -413,7 +527,7 @@ namespace DMS.Controllers
             if (document == null || document.IsDeleted)
             {
                 TempData["ErrorMessage"] = "Không tìm thấy tài liệu";
-                return RedirectToAction("MyDocuments", "Home");
+                return RedirectToReturnUrl(returnUrl) ?? RedirectToAction("MyDocuments", "Home");
             }
 
             // Check permission
@@ -421,7 +535,7 @@ namespace DMS.Controllers
             if (!isAdmin && document.UserId != user.Id)
             {
                 TempData["ErrorMessage"] = "Bạn không có quyền chỉnh sửa tài liệu này";
-                return RedirectToAction("MyDocuments", "Home");
+                return RedirectToReturnUrl(returnUrl) ?? RedirectToAction("MyDocuments", "Home");
             }
 
             // Validate
@@ -431,14 +545,29 @@ namespace DMS.Controllers
                 var folders = await _documentService.GetAllFoldersAsync();
                 ViewBag.Document = document;
                 ViewBag.Folders = folders;
+                ViewBag.ReturnUrl = returnUrl;
                 return View();
             }
 
             var result = await _documentService.UpdateDocumentAsync(id, title, description, folderId, null);
             if (result)
             {
+                // Log activity
+                if (document != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Update", 
+                        "Document", 
+                        id, 
+                        $"Đã cập nhật tài liệu: {title}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã cập nhật tài liệu thành công";
-                return RedirectToAction("MyDocuments", "Home");
+                return RedirectToReturnUrl(returnUrl) ?? RedirectToAction("MyDocuments", "Home");
             }
             else
             {
@@ -446,15 +575,26 @@ namespace DMS.Controllers
                 var folders = await _documentService.GetAllFoldersAsync();
                 ViewBag.Document = document;
                 ViewBag.Folders = folders;
+                ViewBag.ReturnUrl = returnUrl;
                 return View();
             }
+        }
+
+        // Helper method to redirect to returnUrl if valid
+        private IActionResult? RedirectToReturnUrl(string? returnUrl)
+        {
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            return null;
         }
 
         // POST: Share Document to Course
         [Authorize(Roles = "Admin,Instructor")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Share(int? documentId, int? folderId, int? courseId, string? shareType, DateTime? linkExpiry)
+        public async Task<IActionResult> Share(int? documentId, int? folderId, int? courseId, string? shareType, DateTime? linkExpiry, string? returnUrl = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -551,6 +691,23 @@ namespace DMS.Controllers
             }
 
             // Redirect back to previous page or MyDocuments
+            // First check returnUrl if provided
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            
+            // Check if document has a folder and redirect to that folder
+            if (documentId.HasValue)
+            {
+                var sharedDocument = await _documentService.GetDocumentByIdAsync(documentId.Value);
+                if (sharedDocument != null && sharedDocument.FolderId.HasValue)
+                {
+                    return RedirectToAction("MyDocuments", "Home", new { folderId = sharedDocument.FolderId });
+                }
+            }
+            
+            // Check referer for CourseDetails
             var referer = Request.Headers["Referer"].ToString();
             if (!string.IsNullOrEmpty(referer) && referer.Contains("/Home/CourseDetails"))
             {

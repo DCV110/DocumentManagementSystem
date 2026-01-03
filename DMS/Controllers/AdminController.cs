@@ -56,6 +56,7 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateUser(string email, string password, string fullName, string role, string? studentCode, string? faculty, string? classCode)
         {
+            var user = await _userManager.GetUserAsync(User);
             var result = await _userService.CreateUserAsync(email, password, fullName, role, studentCode, faculty, classCode);
             if (!result.Succeeded)
             {
@@ -63,6 +64,20 @@ namespace DMS.Controllers
             }
             else
             {
+                // Log activity
+                if (user != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Create", 
+                        "User", 
+                        null, 
+                        $"Đã tạo người dùng mới: {fullName} ({email}) - Vai trò: {role}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Tạo người dùng thành công!";
             }
             return RedirectToAction("UserManagement");
@@ -73,6 +88,7 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateUser(string userId, string email, string fullName, string role, string? studentCode, string? faculty, string? classCode)
         {
+            var user = await _userManager.GetUserAsync(User);
             var result = await _userService.UpdateUserAsync(userId, email, fullName, role, studentCode, faculty, classCode);
             if (!result.Succeeded)
             {
@@ -80,6 +96,20 @@ namespace DMS.Controllers
             }
             else
             {
+                // Log activity
+                if (user != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Update", 
+                        "User", 
+                        null, 
+                        $"Đã cập nhật thông tin người dùng: {fullName} ({email})",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Cập nhật người dùng thành công!";
             }
             return RedirectToAction("UserManagement");
@@ -90,7 +120,24 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleLock(string userId)
         {
-            await _userService.ToggleUserLockAsync(userId);
+            var user = await _userManager.GetUserAsync(User);
+            var targetUser = await _userManager.FindByIdAsync(userId);
+            var isLocked = await _userService.ToggleUserLockAsync(userId);
+            
+            // Log activity
+            if (user != null && targetUser != null)
+            {
+                await _adminService.LogActivityAsync(
+                    isLocked ? "Lock" : "Unlock", 
+                    "User", 
+                    null, 
+                    $"Đã {(isLocked ? "khóa" : "mở khóa")} tài khoản: {targetUser.FullName} ({targetUser.Email})",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             return RedirectToAction("UserManagement");
         }
 
@@ -99,19 +146,112 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AssignRole(string userId, string role)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var targetUser = await _userManager.FindByIdAsync(userId);
             await _userService.AssignRoleAsync(userId, role);
+            
+            // Log activity
+            if (user != null && targetUser != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "AssignRole", 
+                    "User", 
+                    null, 
+                    $"Đã gán vai trò '{role}' cho người dùng: {targetUser.FullName} ({targetUser.Email})",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             return RedirectToAction("UserManagement");
         }
 
         // Audit Log
-        public IActionResult AuditLog(string? userId, string? action, DateTime? fromDate, DateTime? toDate, int page = 1)
+        public async Task<IActionResult> AuditLog(string? userId, string? action, DateTime? fromDate, DateTime? toDate, int page = 1)
         {
-            // TODO: Implement audit log service when AuditLog model is created
-            ViewBag.UserId = userId;
-            ViewBag.Action = action;
-            ViewBag.FromDate = fromDate;
-            ViewBag.ToDate = toDate;
-            ViewBag.Page = page;
+            try
+            {
+                // Direct check of database
+                var directCount = await _context.AuditLogs.CountAsync();
+                System.Diagnostics.Debug.WriteLine($"Direct DB count: {directCount}");
+                
+                // Try a simple query first to see if it works
+                var simpleQuery = _context.AuditLogs.AsQueryable();
+                var simpleCount = await simpleQuery.CountAsync();
+                System.Diagnostics.Debug.WriteLine($"Simple query count: {simpleCount}");
+                
+                var (logs, totalCount) = await _adminService.GetAuditLogsAsync(userId, action, fromDate, toDate, page, 20);
+                
+                // Ensure logs is never null
+                ViewBag.Logs = logs ?? new List<DMS.Models.AuditLog>();
+                ViewBag.UserId = userId;
+                ViewBag.Action = action;
+                ViewBag.FromDate = fromDate;
+                ViewBag.ToDate = toDate;
+                ViewBag.Page = page;
+                ViewBag.TotalPages = totalCount > 0 ? (int)Math.Ceiling(totalCount / 20.0) : 1;
+                ViewBag.TotalCount = totalCount;
+                ViewBag.DirectCount = directCount; // For debugging
+                
+                // Debug: Log to see what we're getting
+                System.Diagnostics.Debug.WriteLine($"AuditLog Controller: DirectCount={directCount}, SimpleCount={simpleCount}, FilteredCount={totalCount}, LogsReturned={logs?.Count ?? 0}, Page={page}");
+                System.Diagnostics.Debug.WriteLine($"Filters - userId: {userId ?? "null"}, action: {action ?? "null"}, fromDate: {fromDate?.ToString() ?? "null"}, toDate: {toDate?.ToString() ?? "null"}");
+                
+                // If directCount > 0 but totalCount = 0, there's a filter issue
+                if (directCount > 0 && totalCount == 0)
+                {
+                    // Try to get logs directly without service
+                    var directLogs = await _context.AuditLogs
+                        .OrderByDescending(a => a.Timestamp)
+                        .Take(20)
+                        .ToListAsync();
+                    
+                    System.Diagnostics.Debug.WriteLine($"Direct query logs count: {directLogs.Count}");
+                    
+                    // If direct query works, use it
+                    if (directLogs.Any())
+                    {
+                        // Load users manually
+                        var userIds = directLogs.Where(l => !string.IsNullOrEmpty(l.UserId)).Select(l => l.UserId).Distinct().ToList();
+                        if (userIds.Any())
+                        {
+                            var users = await _userManager.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
+                            var userDict = users.ToDictionary(u => u.Id);
+                            foreach (var log in directLogs)
+                            {
+                                if (!string.IsNullOrEmpty(log.UserId) && userDict.ContainsKey(log.UserId))
+                                {
+                                    log.User = userDict[log.UserId];
+                                }
+                            }
+                        }
+                        
+                        ViewBag.Logs = directLogs;
+                        ViewBag.TotalCount = directCount;
+                        ViewBag.TotalPages = (int)Math.Ceiling(directCount / 20.0);
+                    }
+                    else
+                    {
+                        TempData["InfoMessage"] = $"Database có {directCount} bản ghi nhưng không thể truy vấn. Có thể có lỗi với Include User.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't crash
+                ViewBag.Logs = new List<DMS.Models.AuditLog>();
+                ViewBag.TotalCount = 0;
+                ViewBag.TotalPages = 1;
+                ViewBag.UserId = userId;
+                ViewBag.Action = action;
+                ViewBag.FromDate = fromDate;
+                ViewBag.ToDate = toDate;
+                ViewBag.Page = page;
+                TempData["ErrorMessage"] = "Có lỗi khi tải nhật ký: " + ex.Message;
+                System.Diagnostics.Debug.WriteLine($"Exception in AuditLog: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            }
 
             return View();
         }
@@ -121,11 +261,21 @@ namespace DMS.Controllers
         {
             var statistics = await _adminService.GetStatisticsAsync(fromDate, toDate);
             var documentsByCourse = await _adminService.GetDocumentsByCourseAsync();
+            var userActivityStats = await _adminService.GetUserActivityStatsAsync(10);
+            var documentActivityStats = await _adminService.GetDocumentActivityStatsAsync(fromDate, toDate);
+
+            // Calculate total storage
+            var totalStorage = await _context.Documents
+                .Where(d => !d.IsDeleted)
+                .SumAsync(d => (long?)d.FileSize) ?? 0;
 
             ViewBag.TotalUsers = statistics.TotalUsers;
             ViewBag.TotalDocuments = statistics.TotalDocuments;
             ViewBag.TotalCourses = statistics.TotalCourses;
             ViewBag.DocumentsByCourse = documentsByCourse;
+            ViewBag.UserActivityStats = userActivityStats;
+            ViewBag.DocumentActivityStats = documentActivityStats;
+            ViewBag.TotalStorage = totalStorage;
             ViewBag.FromDate = fromDate;
             ViewBag.ToDate = toDate;
 
@@ -294,7 +444,23 @@ namespace DMS.Controllers
                 InstructorId = instructorId
             };
 
+            var user = await _userManager.GetUserAsync(User);
             await _courseService.CreateCourseAsync(course);
+            
+            // Log activity
+            if (user != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "Create", 
+                    "Course", 
+                    course.Id, 
+                    $"Đã tạo khóa học: {course.CourseName} ({course.CourseCode})",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             TempData["SuccessMessage"] = "Đã tạo khóa học thành công";
             return RedirectToAction("CourseManagement");
         }
@@ -317,9 +483,24 @@ namespace DMS.Controllers
             course.Description = description;
             course.InstructorId = instructorId;
 
+            var user = await _userManager.GetUserAsync(User);
             var result = await _courseService.UpdateCourseAsync(course);
             if (result)
             {
+                // Log activity
+                if (user != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Update", 
+                        "Course", 
+                        course.Id, 
+                        $"Đã cập nhật khóa học: {course.CourseName} ({course.CourseCode})",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã cập nhật khóa học thành công";
             }
             else
@@ -334,9 +515,25 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteCourse(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var course = await _courseService.GetCourseByIdAsync(id);
             var result = await _courseService.DeleteCourseAsync(id);
             if (result)
             {
+                // Log activity
+                if (user != null && course != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Delete", 
+                        "Course", 
+                        id, 
+                        $"Đã xóa khóa học: {course.CourseName} ({course.CourseCode})",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã xóa khóa học thành công";
             }
             else
@@ -344,6 +541,117 @@ namespace DMS.Controllers
                 TempData["ErrorMessage"] = "Không thể xóa khóa học";
             }
             return RedirectToAction("CourseManagement");
+        }
+
+        // Document Management - View All Documents
+        public async Task<IActionResult> DocumentManagement(string? search, int? courseId, string? status, string? userId, int page = 1)
+        {
+            var (documents, totalCount) = await _adminService.GetAllDocumentsAsync(search, courseId, status, userId, page, 20);
+            var courses = await _courseService.GetAllCoursesAsync();
+            var allUsers = await _userService.GetUsersAsync(null, null, 1, 1000);
+
+            ViewBag.Documents = documents;
+            ViewBag.Search = search;
+            ViewBag.CourseId = courseId;
+            ViewBag.Status = status;
+            ViewBag.UserId = userId;
+            ViewBag.Page = page;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalCount / 20.0);
+            ViewBag.TotalCount = totalCount;
+            ViewBag.Courses = courses;
+            ViewBag.Users = allUsers.Item1;
+
+            return View();
+        }
+
+        // Bulk Delete Documents
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDeleteDocuments(List<int> documentIds)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            var result = await _adminService.BulkDeleteDocumentsAsync(documentIds, user.Id);
+            if (result)
+            {
+                // Log activity
+                await _adminService.LogActivityAsync("BulkDelete", "Document", null, 
+                    $"Đã xóa {documentIds.Count} tài liệu", user.Id, 
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString());
+                
+                TempData["SuccessMessage"] = $"Đã xóa {documentIds.Count} tài liệu thành công";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể xóa tài liệu";
+            }
+
+            return RedirectToAction("DocumentManagement");
+        }
+
+        // Bulk Approve Documents
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkApproveDocuments(List<int> documentIds)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            var result = await _adminService.BulkApproveDocumentsAsync(documentIds, user.Id);
+            if (result)
+            {
+                // Log activity
+                await _adminService.LogActivityAsync("BulkApprove", "Document", null, 
+                    $"Đã phê duyệt {documentIds.Count} tài liệu", user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString());
+                
+                TempData["SuccessMessage"] = $"Đã phê duyệt {documentIds.Count} tài liệu thành công";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể phê duyệt tài liệu";
+            }
+
+            return RedirectToAction("DocumentManagement");
+        }
+
+        // Bulk Reject Documents
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkRejectDocuments(List<int> documentIds, string reason)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Unauthorized" });
+            }
+
+            var result = await _adminService.BulkRejectDocumentsAsync(documentIds, reason, user.Id);
+            if (result)
+            {
+                // Log activity
+                await _adminService.LogActivityAsync("BulkReject", "Document", null, 
+                    $"Đã từ chối {documentIds.Count} tài liệu: {reason}", user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString());
+                
+                TempData["SuccessMessage"] = $"Đã từ chối {documentIds.Count} tài liệu thành công";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Không thể từ chối tài liệu";
+            }
+
+            return RedirectToAction("DocumentManagement");
         }
     }
 }

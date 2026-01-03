@@ -17,6 +17,7 @@ namespace DMS.Controllers
         private readonly ICourseService _courseService;
         private readonly IFolderService _folderService;
         private readonly IWebHostEnvironment _environment;
+        private readonly IAdminService _adminService;
 
         public HomeController(
             UserManager<ApplicationUser> userManager, 
@@ -24,7 +25,8 @@ namespace DMS.Controllers
             IDocumentService documentService,
             ICourseService courseService,
             IFolderService folderService,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IAdminService adminService)
         {
             _userManager = userManager;
             _context = context;
@@ -32,6 +34,7 @@ namespace DMS.Controllers
             _courseService = courseService;
             _folderService = folderService;
             _environment = environment;
+            _adminService = adminService;
         }
 
         [Authorize]
@@ -458,8 +461,22 @@ namespace DMS.Controllers
                                 FolderId = FolderId,
                                 File = file
                             };
-                            await _documentService.ReplaceDocumentAsync(duplicate.Id, model, user.Id, _environment.WebRootPath);
+                            var replacedDoc = await _documentService.ReplaceDocumentAsync(duplicate.Id, model, user.Id, _environment.WebRootPath);
                             successCount++;
+                            
+                            // Log activity
+                            if (replacedDoc != null)
+                            {
+                                await _adminService.LogActivityAsync(
+                                    "Replace", 
+                                    "Document", 
+                                    replacedDoc.Id, 
+                                    $"Đã thay thế tài liệu: {replacedDoc.Title}",
+                                    user.Id,
+                                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                                    Request.Headers["User-Agent"].ToString()
+                                );
+                            }
                         }
                         else
                         {
@@ -478,8 +495,22 @@ namespace DMS.Controllers
                             File = file
                         };
 
-                        await _documentService.UploadDocumentAsync(model, user.Id, _environment.WebRootPath, false);
+                        var uploadedDoc = await _documentService.UploadDocumentAsync(model, user.Id, _environment.WebRootPath, false);
                         successCount++;
+                        
+                        // Log activity
+                        if (uploadedDoc != null)
+                        {
+                            await _adminService.LogActivityAsync(
+                                "Upload", 
+                                "Document", 
+                                uploadedDoc.Id, 
+                                $"Đã tải lên tài liệu: {uploadedDoc.Title}",
+                                user.Id,
+                                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                                Request.Headers["User-Agent"].ToString()
+                            );
+                        }
                     }
                 }
                 catch (Exception ex)

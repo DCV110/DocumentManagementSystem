@@ -13,12 +13,14 @@ namespace DMS.Controllers
         private readonly IFolderService _folderService;
         private readonly ICourseService _courseService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAdminService _adminService;
 
-        public FolderController(IFolderService folderService, ICourseService courseService, UserManager<ApplicationUser> userManager)
+        public FolderController(IFolderService folderService, ICourseService courseService, UserManager<ApplicationUser> userManager, IAdminService adminService)
         {
             _folderService = folderService;
             _courseService = courseService;
             _userManager = userManager;
+            _adminService = adminService;
         }
 
         // GET: Folder - Redirect to MyDocuments (this page is no longer used)
@@ -41,13 +43,28 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("FolderName,CourseId")] Folder folder)
         {
+            var user = await _userManager.GetUserAsync(User);
             if (ModelState.IsValid)
             {
                 await _folderService.CreateFolderAsync(folder);
+                
+                // Log activity
+                if (user != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Create", 
+                        "Folder", 
+                        folder.Id, 
+                        $"Đã tạo thư mục: {folder.FolderName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 return RedirectToAction("MyDocuments", "Home");
             }
 
-            var user = await _userManager.GetUserAsync(User);
             var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View(folder);
@@ -83,6 +100,7 @@ namespace DMS.Controllers
                 return NotFound();
             }
 
+            var user = await _userManager.GetUserAsync(User);
             if (ModelState.IsValid)
             {
                 var result = await _folderService.UpdateFolderAsync(folder);
@@ -90,10 +108,24 @@ namespace DMS.Controllers
                 {
                     return NotFound();
                 }
+                
+                // Log activity
+                if (user != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Update", 
+                        "Folder", 
+                        folder.Id, 
+                        $"Đã cập nhật thư mục: {folder.FolderName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 return RedirectToAction("MyDocuments", "Home");
             }
 
-            var user = await _userManager.GetUserAsync(User);
             var courses = user != null ? await _courseService.GetCoursesByInstructorAsync(user.Id) : new List<Course>();
             ViewBag.Courses = courses;
             return View(folder);
@@ -110,9 +142,24 @@ namespace DMS.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            var folder = await _folderService.GetFolderByIdAsync(id);
             var result = await _folderService.DeleteFolderAsync(id, user.Id);
             if (result)
             {
+                // Log activity
+                if (folder != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Delete", 
+                        "Folder", 
+                        id, 
+                        $"Đã xóa thư mục: {folder.FolderName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Thư mục đã được chuyển vào thùng rác.";
             }
             else
@@ -144,9 +191,25 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Restore(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            var folder = await _folderService.GetFolderByIdAsync(id);
             var result = await _folderService.RestoreFolderAsync(id);
             if (result)
             {
+                // Log activity
+                if (user != null && folder != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "Restore", 
+                        "Folder", 
+                        id, 
+                        $"Đã khôi phục thư mục: {folder.FolderName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Thư mục đã được khôi phục.";
             }
             else
@@ -187,6 +250,20 @@ namespace DMS.Controllers
             var result = await _folderService.DeletePermanentlyAsync(id);
             if (result)
             {
+                // Log activity
+                if (folder != null)
+                {
+                    await _adminService.LogActivityAsync(
+                        "DeletePermanently", 
+                        "Folder", 
+                        id, 
+                        $"Đã xóa vĩnh viễn thư mục: {folder.FolderName}",
+                        user.Id,
+                        HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        Request.Headers["User-Agent"].ToString()
+                    );
+                }
+                
                 TempData["SuccessMessage"] = "Đã xóa vĩnh viễn thư mục thành công";
             }
             else

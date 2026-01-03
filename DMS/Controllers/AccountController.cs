@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using DMS.Models;
+using DMS.Services.Interfaces;
 
 namespace DMS.Controllers
 {
@@ -8,13 +9,16 @@ namespace DMS.Controllers
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IAdminService _adminService;
 
         public AccountController(
             SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IAdminService adminService)
         {
             _signInManager = signInManager;
             _userManager = userManager;
+            _adminService = adminService;
         }
 
         [HttpGet]
@@ -54,6 +58,17 @@ namespace DMS.Controllers
             
             if (result.Succeeded)
             {
+                // Log login activity
+                await _adminService.LogActivityAsync(
+                    "Login",
+                    "User",
+                    null,
+                    $"Đã đăng nhập vào hệ thống",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+                
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 {
                     return Redirect(returnUrl);
@@ -75,6 +90,22 @@ namespace DMS.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
+            var user = await _userManager.GetUserAsync(User);
+            
+            // Log logout activity before signing out
+            if (user != null)
+            {
+                await _adminService.LogActivityAsync(
+                    "Logout",
+                    "User",
+                    null,
+                    $"Đã đăng xuất khỏi hệ thống",
+                    user.Id,
+                    HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    Request.Headers["User-Agent"].ToString()
+                );
+            }
+            
             await _signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }

@@ -56,6 +56,10 @@
             <span class="material-symbols-outlined">school</span>
             <span>Quản lý khóa học</span>
         </a>
+        <a href="@Url.Action("DocumentManagement", "Admin")" class="nav-item @(currentAction == "DocumentManagement" && currentController == "Admin" ? "active" : "")">
+            <span class="material-symbols-outlined">folder_managed</span>
+            <span>Quản lý tài liệu</span>
+        </a>
         <a href="@Url.Action("Reports", "Admin")" class="nav-item @(currentAction == "Reports" && currentController == "Admin" ? "active" : "")">
             <span class="material-symbols-outlined">bar_chart</span>
             <span>Báo cáo</span>
