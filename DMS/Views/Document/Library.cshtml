@@ -38,10 +38,7 @@
         <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
     </div>
     <div class="header-actions">
-        <button class="notification-btn">
-            <span class="material-symbols-outlined">notifications</span>
-            <span class="notification-badge"></span>
-        </button>
+        <partial name="_NotificationDropdown" />
         <button class="settings-btn">
             <span class="material-symbols-outlined">settings</span>
         </button>
@@ -314,10 +311,7 @@ else
             <p>Tìm kiếm và tải xuống tài liệu công khai</p>
         </div>
         <div class="header-actions">
-            <button class="notification-icon">
-                <span class="material-symbols-outlined">notifications</span>
-                <span class="notification-dot"></span>
-            </button>
+            <partial name="_NotificationDropdown" />
         </div>
     </div>
     <!-- Content Body -->

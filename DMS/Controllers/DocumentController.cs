@@ -19,6 +19,7 @@ namespace DMS.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly ApplicationDbContext _context;
         private readonly IAdminService _adminService;
+        private readonly INotificationService _notificationService;
 
         public DocumentController(
             IDocumentService documentService,
@@ -27,7 +28,8 @@ namespace DMS.Controllers
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment environment,
             ApplicationDbContext context,
-            IAdminService adminService)
+            IAdminService adminService,
+            INotificationService notificationService)
         {
             _documentService = documentService;
             _folderService = folderService;
@@ -36,6 +38,7 @@ namespace DMS.Controllers
             _environment = environment;
             _context = context;
             _adminService = adminService;
+            _notificationService = notificationService;
         }
 
         // Upload Document - Redirect to MyDocuments (upload is now integrated there)
@@ -302,6 +305,20 @@ namespace DMS.Controllers
                     HttpContext.Connection.RemoteIpAddress?.ToString(),
                     Request.Headers["User-Agent"].ToString()
                 );
+                
+                // Create notification for document owner
+                if (document.UserId != user.Id)
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        document.UserId,
+                        "Tài liệu của bạn đã bị từ chối",
+                        $"Tài liệu '{document.Title}' đã bị từ chối. Lý do: {reason}",
+                        "error",
+                        Url.Action("Preview", "Document", new { id = document.Id }),
+                        "Document",
+                        document.Id
+                    );
+                }
             }
             
             return RedirectToAction("Approval");
@@ -605,7 +622,7 @@ namespace DMS.Controllers
             if (documentId.HasValue)
             {
                 // Share document
-                var document = await _documentService.GetDocumentByIdAsync(documentId.Value);
+                var document = await _documentService.GetDocumentWithDetailsAsync(documentId.Value);
                 if (document == null)
                 {
                     TempData["ErrorMessage"] = "Không tìm thấy tài liệu";
@@ -627,6 +644,21 @@ namespace DMS.Controllers
                     var result = await _documentService.RequestPublicSharingAsync(documentId.Value);
                     if (result)
                     {
+                        // Notify all admins about the new public share request
+                        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                        foreach (var admin in admins)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                admin.Id,
+                                "Có yêu cầu phê duyệt public mới",
+                                $"Giảng viên {document.User?.FullName ?? user.UserName} đã yêu cầu phê duyệt public tài liệu '{document.Title}'",
+                                "warning",
+                                Url.Action("Approval", "Document", new { filter = "pending" }),
+                                "Document",
+                                document.Id
+                            );
+                        }
+                        
                         TempData["SuccessMessage"] = "Đã gửi yêu cầu chia sẻ lên thư viện công khai. Vui lòng chờ admin phê duyệt.";
                     }
                     else
@@ -788,6 +820,21 @@ namespace DMS.Controllers
                 }
                 else
                 {
+                    // Notify all admins about the new public share request
+                    var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                    foreach (var admin in admins)
+                    {
+                        await _notificationService.CreateNotificationAsync(
+                            admin.Id,
+                            "Có yêu cầu phê duyệt public mới",
+                            $"Giảng viên {document.User?.FullName ?? user.UserName} đã yêu cầu phê duyệt public tài liệu '{document.Title}'",
+                            "warning",
+                            Url.Action("Approval", "Document", new { filter = "pending" }),
+                            "Document",
+                            document.Id
+                        );
+                    }
+                    
                     TempData["SuccessMessage"] = "Đã gửi yêu cầu chia sẻ công khai. Vui lòng chờ admin phê duyệt.";
                 }
             }
@@ -909,6 +956,21 @@ namespace DMS.Controllers
             }
 
             await _context.SaveChangesAsync();
+            
+            // Create notification for document owner
+            if (document.UserId != user.Id)
+            {
+                await _notificationService.CreateNotificationAsync(
+                    document.UserId,
+                    "Tài liệu của bạn đã được phê duyệt public",
+                    $"Tài liệu '{document.Title}' đã được admin phê duyệt và hiển thị trong thư viện công khai.",
+                    "success",
+                    Url.Action("Preview", "Document", new { id = document.Id }),
+                    "Document",
+                    document.Id
+                );
+            }
+            
             TempData["SuccessMessage"] = "Đã phê duyệt chia sẻ công khai thành công";
 
             return RedirectToAction("Approval", "Document");
@@ -939,6 +1001,21 @@ namespace DMS.Controllers
             document.RejectionReason = reason;
 
             await _context.SaveChangesAsync();
+            
+            // Create notification for document owner
+            if (document.UserId != user.Id)
+            {
+                await _notificationService.CreateNotificationAsync(
+                    document.UserId,
+                    "Yêu cầu public tài liệu đã bị từ chối",
+                    $"Tài liệu '{document.Title}' đã bị từ chối. Lý do: {reason}",
+                    "error",
+                    Url.Action("Preview", "Document", new { id = document.Id }),
+                    "Document",
+                    document.Id
+                );
+            }
+            
             TempData["SuccessMessage"] = "Đã từ chối yêu cầu chia sẻ công khai";
 
             return RedirectToAction("Approval", "Document");

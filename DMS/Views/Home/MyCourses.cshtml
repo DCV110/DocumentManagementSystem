@@ -21,10 +21,7 @@
         <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
     </div>
     <div class="header-actions">
-        <button class="notification-btn">
-            <span class="material-symbols-outlined">notifications</span>
-            <span class="notification-badge"></span>
-        </button>
+        <partial name="_NotificationDropdown" />
         <div class="user-menu">
             <button class="avatar-btn" id="avatarBtn" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></button>
             <div class="user-dropdown" id="userDropdown">

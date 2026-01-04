@@ -192,17 +192,20 @@ namespace DMS.Controllers
             
             foreach (var doc in recentDocuments)
             {
-                activities.Add((
-                    doc.UploadDate,
-                    "document_upload",
-                    "Nộp tài liệu mới",
-                    doc.Title,
-                    doc.User,
-                    doc.Status == DocumentStatus.Pending ? "Chờ duyệt" : 
-                    doc.Status == DocumentStatus.Approved ? "Đã phê duyệt" : "Đã từ chối",
-                    doc.Status == DocumentStatus.Pending ? "blue" : 
-                    doc.Status == DocumentStatus.Approved ? "gray" : "red"
-                ));
+                if (doc.User != null) // Đảm bảo User được load
+                {
+                    activities.Add((
+                        doc.UploadDate,
+                        "document_upload",
+                        "Nộp tài liệu mới",
+                        doc.Title,
+                        doc.User,
+                        doc.Status == DocumentStatus.Pending ? "Chờ duyệt" : 
+                        doc.Status == DocumentStatus.Approved ? "Đã phê duyệt" : "Đã từ chối",
+                        doc.Status == DocumentStatus.Pending ? "blue" : 
+                        doc.Status == DocumentStatus.Approved ? "gray" : "red"
+                    ));
+                }
             }
 
             foreach (var newUser in recentUsers)
@@ -222,7 +225,7 @@ namespace DMS.Controllers
             var recentActivities = activities
                 .OrderByDescending(a => a.DateTime)
                 .Take(4)
-                .Select(a => new
+                .Select(a => new DMS.ViewModels.RecentActivityVM
                 {
                     Type = a.Type,
                     Title = a.Title,
@@ -748,7 +751,10 @@ namespace DMS.Controllers
             var allDocuments = await _documentService.GetDocumentsByUserAsync(user.Id);
             var allFolders = await _folderService.GetFoldersByUserAsync(user.Id);
 
-            // Filter by course
+            // Filter by course - Only show documents that are explicitly shared to this course (CourseId == id)
+            // Note: Public documents (IsPublicShared) are NOT automatically shown here.
+            // Public documents only appear in "Thư viện tài liệu" (Library page).
+            // To show a document in this course, it must be explicitly shared to the course (CourseId must be set).
             var documents = allDocuments.Where(d => d.CourseId == id && !d.IsDeleted).AsEnumerable();
             var folders = allFolders.Where(f => f.CourseId == id && !f.IsDeleted).AsEnumerable();
 

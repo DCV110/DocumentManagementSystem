@@ -16,10 +16,7 @@
             <p>Cái nhìn tổng quan về hoạt động hệ thống, số liệu thống kê và cảnh báo.</p>
         </div>
         <div class="header-actions">
-            <button class="notification-icon">
-                <span class="material-symbols-outlined">notifications</span>
-                <span class="notification-dot"></span>
-            </button>
+            <partial name="_NotificationDropdown" />
         </div>
     </div>
 
@@ -109,12 +106,12 @@
                     <tbody>
                         @if (ViewBag.RecentActivities != null)
                         {
-                            var activities = ViewBag.RecentActivities as List<dynamic>;
+                            var activities = ViewBag.RecentActivities as List<DMS.ViewModels.RecentActivityVM>;
                             @if (activities != null && activities.Any())
                             {
                                 @foreach (var activity in activities)
                                 {
-                                    var activityUser = activity.User as DMS.Models.ApplicationUser;
+                                    var activityUser = activity.User;
                                     var iconClass = activity.Type == "document_upload" ? "blue" : "green";
                                     var iconSymbol = activity.Type == "document_upload" ? "upload_file" : "person_add";
                                     var statusBadgeClass = activity.StatusClass == "blue" ? "status-badge blue" :

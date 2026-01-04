@@ -37,10 +37,7 @@ else
             <p>@course?.CourseCode@(!string.IsNullOrEmpty(course?.ClassCode) ? $" - {course.ClassCode}" : "") • Quản lý tài liệu và thư mục trong khóa học</p>
         </div>
         <div class="header-actions">
-            <button class="notification-icon">
-                <span class="material-symbols-outlined">notifications</span>
-                <span class="notification-dot"></span>
-            </button>
+            <partial name="_NotificationDropdown" />
         </div>
     </div>
 

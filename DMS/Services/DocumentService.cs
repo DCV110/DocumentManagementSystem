@@ -272,6 +272,13 @@ namespace DMS.Services
         }
 
         // Get Documents for Library (Student view)
+        // IMPORTANT: This method only returns documents that have been approved for public sharing.
+        // Documents shared to a course (CourseId != null) are NOT automatically shown here unless they are also public.
+        // To appear in the Library, a document must:
+        //   1. Have IsPublicShared = true
+        //   2. Have PublicShareApproved = true (approved by admin)
+        // Note: PublicShareRequested is not required because it may be set to false after approval.
+        // Documents in courses (CourseId != null) only appear in the course page, not in the Library.
         public async Task<(List<Document> Documents, int TotalCount)> GetDocumentsByLibraryAsync(
             string? search,
             int? courseId,
@@ -284,30 +291,14 @@ namespace DMS.Services
                 .Include(d => d.Course)
                     .ThenInclude(c => c.Instructor)
                 .Include(d => d.User)
-                .Where(d => !d.IsDeleted && d.Status == DocumentStatus.Approved && 
-                    (d.CourseId != null || (d.IsPublicShared && d.PublicShareApproved)))
+                .Where(d => !d.IsDeleted && 
+                    d.IsPublicShared && 
+                    d.PublicShareApproved)
                 .AsQueryable();
 
-            // Filter by student's enrolled courses if studentId is provided
-            if (!string.IsNullOrEmpty(studentId))
-            {
-                // Get all courses that the student is enrolled in
-                var enrolledCourseIds = await _context.StudentCourses
-                    .Where(sc => sc.StudentId == studentId)
-                    .Select(sc => sc.CourseId)
-                    .ToListAsync();
-                
-                if (enrolledCourseIds.Any())
-                {
-                    // Only show documents from courses the student is enrolled in
-                    query = query.Where(d => d.CourseId.HasValue && enrolledCourseIds.Contains(d.CourseId.Value));
-                }
-                else
-                {
-                    // Student not enrolled in any course, return empty
-                    return (new List<Document>(), 0);
-                }
-            }
+            // Note: Public documents are visible to everyone, including students
+            // Students can see all public documents regardless of course enrollment
+            // (The original logic filtered by enrolled courses, but public documents should be accessible to all)
 
             // Filter by specific course if selected
             if (courseId.HasValue)
@@ -421,14 +412,19 @@ namespace DMS.Services
             }
             else if (filter == "approved")
             {
-                // Only show documents that are approved for public sharing (not personal files)
-                query = query.Where(d => d.IsPublicShared && d.PublicShareApproved);
+                // Show documents that have been approved for public sharing (including those that were unpublished)
+                // This includes: documents with PublicShareApproved = true OR documents with PublicShareToken (previously shared)
+                query = query.Where(d => 
+                    (d.PublicShareApproved && d.PublicShareRequested) || 
+                    (!string.IsNullOrEmpty(d.PublicShareToken) && d.PublicShareRequested) ||
+                    (d.Status == DocumentStatus.Approved && d.CourseId != null));
             }
             else if (filter == "rejected")
             {
                 // Documents that are rejected (public share requests that were rejected)
-                query = query.Where(d => d.PublicShareRequested && !d.PublicShareApproved && 
-                    !string.IsNullOrEmpty(d.RejectionReason));
+                // Note: After rejection, PublicShareRequested may be set to false, so we only check RejectionReason
+                query = query.Where(d => !string.IsNullOrEmpty(d.RejectionReason) && 
+                    !d.PublicShareApproved);
             }
 
             return await query
