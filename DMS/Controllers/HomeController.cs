@@ -70,9 +70,31 @@ namespace DMS.Controllers
                 .ToListAsync();
             var courses = enrolledCourses.Take(3).ToList();
             
-            // Lấy tài liệu mới (trong 7 ngày qua) - chỉ từ courses mà sinh viên đã đăng ký
+            // Lấy danh sách course IDs mà sinh viên đã đăng ký
+            var enrolledCourseIds = enrolledCourses.Select(c => c.Id).ToList();
+            
+            // Lấy tài liệu mới (trong 7 ngày qua) - từ các khóa học đã đăng ký (KHÔNG phải file public)
             var sevenDaysAgo = DateTime.Now.AddDays(-7);
-            var (allDocuments, _) = await _documentService.GetDocumentsByLibraryAsync(null, null, "newest", 1, 100, user.Id);
+            
+            // Lấy file được chia sẻ vào các khóa học đã đăng ký (không phải file public)
+            var courseDocuments = await _context.Documents
+                .Include(d => d.User)
+                .Include(d => d.Course)
+                .Where(d => enrolledCourseIds.Contains(d.CourseId ?? 0) && 
+                           !d.IsDeleted && 
+                           !d.IsPublicShared &&
+                           d.CourseId.HasValue)
+                .OrderByDescending(d => d.UploadDate)
+                .ToListAsync();
+            
+            // Lấy file public (từ thư viện)
+            var (publicDocuments, _) = await _documentService.GetDocumentsByLibraryAsync(null, null, "newest", 1, 100, user.Id);
+            
+            // Kết hợp cả hai loại file
+            var allDocuments = courseDocuments.Concat(publicDocuments)
+                .OrderByDescending(d => d.UploadDate)
+                .ToList();
+            
             var newDocuments = allDocuments.Where(d => d.UploadDate >= sevenDaysAgo).ToList();
             
             // Lấy tài liệu đã tải (tạm thời lấy tất cả documents có thể truy cập)
@@ -86,9 +108,18 @@ namespace DMS.Controllers
                 .Count();
 
             var documents = allDocuments.Take(4).ToList();
+            
+            // Tính số lượng tài liệu cho mỗi khóa học (chỉ file được chia sẻ vào khóa học, không phải file public)
+            var courseDocumentCounts = new Dictionary<int, int>();
+            foreach (var course in courses)
+            {
+                var count = courseDocuments.Count(d => d.CourseId == course.Id);
+                courseDocumentCounts[course.Id] = count;
+            }
 
             ViewBag.User = user;
             ViewBag.Courses = courses;
+            ViewBag.CourseDocumentCounts = courseDocumentCounts; // Thêm dictionary để đếm đúng
             ViewBag.Documents = documents;
             ViewBag.NewDocumentsCount = newDocuments.Count;
             ViewBag.DownloadedCount = downloadedCount;
@@ -682,19 +713,31 @@ namespace DMS.Controllers
                 .Select(sc => sc.Course)
                 .ToListAsync();
 
-            // Lấy thông tin đầy đủ cho mỗi course
-            var courses = new List<Course>();
+            // Lấy danh sách course IDs
+            var enrolledCourseIds = enrolledCourses.Select(c => c.Id).ToList();
+            
+            // Lấy file được chia sẻ vào các khóa học đã đăng ký (không phải file public)
+            var courseDocuments = await _context.Documents
+                .Include(d => d.User)
+                .Include(d => d.Course)
+                .Where(d => enrolledCourseIds.Contains(d.CourseId ?? 0) && 
+                           !d.IsDeleted && 
+                           !d.IsPublicShared &&
+                           d.CourseId.HasValue)
+                .ToListAsync();
+            
+            // Tính số lượng tài liệu cho mỗi khóa học (chỉ file được chia sẻ vào khóa học, không phải file public)
+            var courseDocumentCounts = new Dictionary<int, int>();
             foreach (var course in enrolledCourses)
             {
-                var courseWithDocs = await _courseService.GetCourseWithDocumentsAsync(course.Id);
-                if (courseWithDocs != null)
-                {
-                    courses.Add(courseWithDocs);
-                }
+                var count = courseDocuments.Count(d => d.CourseId == course.Id);
+                courseDocumentCounts[course.Id] = count;
             }
 
             ViewBag.User = user;
-            ViewBag.Courses = courses;
+            ViewBag.Courses = enrolledCourses;
+            ViewBag.CourseDocumentCounts = courseDocumentCounts; // Thêm dictionary để đếm đúng
+            ViewBag.CourseDocuments = courseDocuments; // Thêm để tính tài liệu mới trong view
 
             return View();
         }
@@ -706,9 +749,33 @@ namespace DMS.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
-            // Lấy tài liệu mới để hiển thị timeline
-            var (allDocuments, totalCount) = await _documentService.GetDocumentsByLibraryAsync(null, null, "newest", 1, 100);
-            var recentDocuments = allDocuments.OrderByDescending(d => d.UploadDate).Take(10).ToList();
+            // Lấy danh sách course IDs mà sinh viên đã đăng ký
+            var enrolledCourseIds = await _context.StudentCourses
+                .Where(sc => sc.StudentId == user.Id)
+                .Select(sc => sc.CourseId)
+                .ToListAsync();
+            
+            // Lấy file được chia sẻ vào các khóa học đã đăng ký (không phải file public)
+            var courseDocuments = await _context.Documents
+                .Include(d => d.User)
+                .Include(d => d.Course)
+                .Where(d => enrolledCourseIds.Contains(d.CourseId ?? 0) && 
+                           !d.IsDeleted && 
+                           !d.IsPublicShared &&
+                           d.CourseId.HasValue)
+                .OrderByDescending(d => d.UploadDate)
+                .ToListAsync();
+            
+            // Lấy file public (từ thư viện)
+            var (publicDocuments, _) = await _documentService.GetDocumentsByLibraryAsync(null, null, "newest", 1, 100);
+            
+            // Kết hợp cả hai loại file
+            var allDocuments = courseDocuments.Concat(publicDocuments)
+                .OrderByDescending(d => d.UploadDate)
+                .ToList();
+            
+            var totalCount = allDocuments.Count;
+            var recentDocuments = allDocuments.Take(10).ToList();
 
             // Tính toán thống kê
             var sevenDaysAgo = DateTime.Now.AddDays(-7);
@@ -733,7 +800,7 @@ namespace DMS.Controllers
         }
 
         // GET: Course Details - View files and folders in a course
-        [Authorize(Roles = "Admin,Instructor")]
+        [Authorize(Roles = "Admin,Instructor,Student")]
         [HttpGet]
         public async Task<IActionResult> CourseDetails(int id, string? search, string? sortBy)
         {
@@ -747,16 +814,65 @@ namespace DMS.Controllers
                 return NotFound();
             }
 
-            // Get all documents and folders for this course
-            var allDocuments = await _documentService.GetDocumentsByUserAsync(user.Id);
-            var allFolders = await _folderService.GetFoldersByUserAsync(user.Id);
+            // Check user role
+            var isStudent = await _userManager.IsInRoleAsync(user, "Student");
+            var isInstructor = await _userManager.IsInRoleAsync(user, "Instructor");
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            
+            // If student, verify they are enrolled in this course
+            if (isStudent)
+            {
+                var isEnrolled = await _context.StudentCourses
+                    .AnyAsync(sc => sc.StudentId == user.Id && sc.CourseId == id);
+                if (!isEnrolled)
+                {
+                    TempData["ErrorMessage"] = "Bạn chưa đăng ký khóa học này";
+                    return RedirectToAction("MyCourses", "Home");
+                }
+            }
 
-            // Filter by course - Only show documents that are explicitly shared to this course (CourseId == id)
-            // Note: Public documents (IsPublicShared) are NOT automatically shown here.
-            // Public documents only appear in "Thư viện tài liệu" (Library page).
-            // To show a document in this course, it must be explicitly shared to the course (CourseId must be set).
-            var documents = allDocuments.Where(d => d.CourseId == id && !d.IsDeleted).AsEnumerable();
-            var folders = allFolders.Where(f => f.CourseId == id && !f.IsDeleted).AsEnumerable();
+            // Get documents and folders for this course
+            // For students: show ALL documents shared to this course (regardless of who uploaded)
+            // For instructors/admins: show their own documents shared to this course
+            List<Document> allDocuments;
+            List<Folder> allFolders;
+            IEnumerable<Document> documents;
+            IEnumerable<Folder> folders;
+            
+            if (isStudent)
+            {
+                // Students see all documents shared to the course (but NOT public documents)
+                // Public documents only appear in "Thư viện tài liệu" (Library page)
+                allDocuments = await _context.Documents
+                    .Include(d => d.User)
+                    .Include(d => d.Course)
+                    .Where(d => d.CourseId == id && !d.IsDeleted && !d.IsPublicShared)
+                    .OrderByDescending(d => d.UploadDate)
+                    .ToListAsync();
+                
+                allFolders = await _context.Folders
+                    .Include(f => f.Creator)
+                    .Where(f => f.CourseId == id && !f.IsDeleted)
+                    .OrderByDescending(f => f.CreatedDate)
+                    .ToListAsync();
+                
+                // For students, documents and folders are already filtered, so no need to filter again
+                documents = allDocuments.AsEnumerable();
+                folders = allFolders.AsEnumerable();
+            }
+            else
+            {
+                // Instructors/Admins see only their own documents/folders shared to the course
+                allDocuments = await _documentService.GetDocumentsByUserAsync(user.Id);
+                allFolders = await _folderService.GetFoldersByUserAsync(user.Id);
+                
+                // Filter by course - Only show documents that are explicitly shared to this course (CourseId == id)
+                // IMPORTANT: Exclude public documents (IsPublicShared) - they only appear in "Thư viện tài liệu" (Library page)
+                // To show a document in this course, it must be explicitly shared to the course (CourseId must be set)
+                // AND it must NOT be a public document (IsPublicShared = false)
+                documents = allDocuments.Where(d => d.CourseId == id && !d.IsDeleted && !d.IsPublicShared).AsEnumerable();
+                folders = allFolders.Where(f => f.CourseId == id && !f.IsDeleted).AsEnumerable();
+            }
 
             // Apply search
             if (!string.IsNullOrWhiteSpace(search))
@@ -801,8 +917,24 @@ namespace DMS.Controllers
             var folderItemCounts = new Dictionary<int, int>();
             foreach (var folder in foldersList)
             {
-                var documentCount = allDocuments.Count(d => d.FolderId == folder.Id && !d.IsDeleted);
-                var subfolderCount = allFolders.Count(f => f.ParentFolderId == folder.Id && !f.IsDeleted);
+                // For students: count all documents/folders in the folder
+                // For instructors/admins: count only their own documents/folders
+                int documentCount;
+                int subfolderCount;
+                
+                if (isStudent)
+                {
+                    documentCount = await _context.Documents
+                        .CountAsync(d => d.FolderId == folder.Id && !d.IsDeleted);
+                    subfolderCount = await _context.Folders
+                        .CountAsync(f => f.ParentFolderId == folder.Id && !f.IsDeleted);
+                }
+                else
+                {
+                    documentCount = allDocuments.Count(d => d.FolderId == folder.Id && !d.IsDeleted);
+                    subfolderCount = allFolders.Count(f => f.ParentFolderId == folder.Id && !f.IsDeleted);
+                }
+                
                 folderItemCounts[folder.Id] = documentCount + subfolderCount;
             }
 

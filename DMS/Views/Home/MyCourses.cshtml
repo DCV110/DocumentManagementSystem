@@ -70,9 +70,19 @@
                     {
                         @if (course != null)
                         {
-                            var documentCount = course.Documents?.Count ?? 0;
+                            // Lấy số lượng tài liệu từ dictionary (chỉ file được chia sẻ vào khóa học, không phải file public)
+                            var courseDocumentCounts = ViewBag.CourseDocumentCounts as Dictionary<int, int>;
+                            var documentCount = courseDocumentCounts != null && courseDocumentCounts.ContainsKey(course.Id) 
+                                ? courseDocumentCounts[course.Id] 
+                                : 0;
+                            
+                            // Tính số tài liệu mới (trong 7 ngày qua) - cần lấy từ courseDocuments
                             var sevenDaysAgo = DateTime.Now.AddDays(-7);
-                            var newDocumentsCount = course.Documents?.Where(d => d.UploadDate >= sevenDaysAgo).Count() ?? 0;
+                            var courseDocuments = ViewBag.CourseDocuments as List<DMS.Models.Document>;
+                            var newDocumentsCount = courseDocuments != null 
+                                ? courseDocuments.Where(d => d.CourseId == course.Id && d.UploadDate >= sevenDaysAgo).Count() 
+                                : 0;
+                            
                             var colorIndex = index % colors.Length;
                             var iconIndex = index % icons.Length;
                             index++;
@@ -116,7 +126,7 @@
                                 </div>
                                 
                                 <div class="course-footer">
-                                    <a href="@Url.Action("Library", "Document", new { courseId = course.Id })" class="btn-view-documents">
+                                    <a href="@Url.Action("CourseDetails", "Home", new { id = course.Id })" class="btn-view-documents">
                                         <span class="material-symbols-outlined">folder_open</span>
                                         Xem tài liệu
                                     </a>

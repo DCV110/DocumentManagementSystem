@@ -160,7 +160,7 @@ namespace DMS.Controllers
 
         // Preview - All roles
         [HttpGet]
-        public async Task<IActionResult> Preview(int id)
+        public async Task<IActionResult> Preview(int id, string? returnUrl = null)
         {
             var user = await _userManager.GetUserAsync(User);
             var document = await _documentService.GetDocumentWithDetailsAsync(id);
@@ -203,6 +203,7 @@ namespace DMS.Controllers
 
             ViewBag.Document = document;
             ViewBag.ZipContents = zipContents;
+            ViewBag.ReturnUrl = returnUrl;
             return View();
         }
 
@@ -938,6 +939,13 @@ namespace DMS.Controllers
                 return RedirectToAction("Approval", "Document");
             }
 
+            // Check if document is already public
+            if (document.IsPublicShared && document.PublicShareApproved)
+            {
+                TempData["InfoMessage"] = "Tài liệu này đã được public trước đó";
+                return RedirectToAction("Approval", "Document", new { filter = "approved" });
+            }
+
             if (!document.PublicShareRequested)
             {
                 TempData["ErrorMessage"] = "Tài liệu này chưa có yêu cầu chia sẻ công khai";
@@ -946,8 +954,15 @@ namespace DMS.Controllers
 
             document.IsPublicShared = true;
             document.PublicShareApproved = true;
+            document.PublicShareRequested = false; // Clear the request flag
             document.ApprovedBy = user.Id;
             document.ApprovedDate = DateTime.Now;
+
+            // Generate token if not exists
+            if (string.IsNullOrEmpty(document.PublicShareToken))
+            {
+                document.PublicShareToken = Guid.NewGuid().ToString("N");
+            }
 
             // Also approve the document itself if it's pending
             if (document.Status == DocumentStatus.Pending)
@@ -995,8 +1010,19 @@ namespace DMS.Controllers
                 return RedirectToAction("Approval", "Document");
             }
 
+            // Only reject if the document is pending approval (not already approved and public)
+            // If document is already public (IsPublicShared = true and PublicShareApproved = true),
+            // we should not reject it, only reject pending requests
+            if (document.IsPublicShared && document.PublicShareApproved)
+            {
+                TempData["ErrorMessage"] = "Không thể từ chối tài liệu đã được public. Vui lòng sử dụng chức năng 'Bỏ public'.";
+                return RedirectToAction("Approval", "Document", new { filter = "approved" });
+            }
+
+            // Reject the pending request
             document.PublicShareRequested = false;
             document.PublicShareApproved = false;
+            document.IsPublicShared = false;
             document.PublicShareToken = null;
             document.RejectionReason = reason;
 

@@ -9,16 +9,22 @@
 @{
     var currentUser = await UserManager.GetUserAsync(User);
     var isAdmin = false;
+    var isStudent = false;
     if (currentUser != null)
     {
         var roles = await UserManager.GetRolesAsync(currentUser);
         isAdmin = roles.Contains("Admin");
+        isStudent = roles.Contains("Student");
     }
 }
 
 @if (isAdmin)
 {
     <partial name="_AdminSidebar" />
+}
+else if (isStudent)
+{
+    <partial name="_StudentSidebar" />
 }
 else
 {
@@ -59,8 +65,24 @@ else
 
         <!-- Breadcrumb Navigation -->
         <div class="breadcrumb-nav" style="margin-bottom: 24px;">
-            <a href="@Url.Action("InstructorDashboard", "Home")" style="color: #6b7280; text-decoration: none;">Dashboard</a>
+            @if (isStudent)
+            {
+                <a href="@Url.Action("StudentDashboard", "Home")" style="color: #6b7280; text-decoration: none;">Dashboard</a>
+            }
+            else if (isAdmin)
+            {
+                <a href="@Url.Action("AdminDashboard", "Home")" style="color: #6b7280; text-decoration: none;">Dashboard</a>
+            }
+            else
+            {
+                <a href="@Url.Action("InstructorDashboard", "Home")" style="color: #6b7280; text-decoration: none;">Dashboard</a>
+            }
             <span style="color: #9ca3af; margin: 0 8px;">/</span>
+            @if (isStudent)
+            {
+                <a href="@Url.Action("MyCourses", "Home")" style="color: #6b7280; text-decoration: none;">Khóa học của tôi</a>
+                <span style="color: #9ca3af; margin: 0 8px;">/</span>
+            }
             <span style="color: #111418; font-weight: 500;">@course?.CourseName</span>
         </div>
 
@@ -119,22 +141,25 @@ else
                                             <span class="material-symbols-outlined">visibility</span>
                                             <span>Xem</span>
                                         </a>
-                                        <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModalForFolder(@folder.Id, '@folder.FolderName.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
-                                            <span class="material-symbols-outlined">share</span>
-                                            <span>Chia sẻ</span>
-                                        </button>
-                                        <a href="@Url.Action("Edit", "Folder", new { id = folder.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
-                                            <span class="material-symbols-outlined">edit</span>
-                                            <span>Sửa</span>
-                                        </a>
-                                        <form method="post" action="@Url.Action("Delete", "Folder", new { id = folder.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa thư mục này?');" onclick="event.stopPropagation();">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@folder.Id" />
-                                            <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
-                                                <span class="material-symbols-outlined">delete</span>
-                                                <span>Xóa</span>
+                                        @if (!isStudent)
+                                        {
+                                            <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModalForFolder(@folder.Id, '@folder.FolderName.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                                <span class="material-symbols-outlined">share</span>
+                                                <span>Chia sẻ</span>
                                             </button>
-                                        </form>
+                                            <a href="@Url.Action("Edit", "Folder", new { id = folder.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">edit</span>
+                                                <span>Sửa</span>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "Folder", new { id = folder.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa thư mục này?');" onclick="event.stopPropagation();">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@folder.Id" />
+                                                <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                    <span class="material-symbols-outlined">delete</span>
+                                                    <span>Xóa</span>
+                                                </button>
+                                            </form>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -156,11 +181,11 @@ else
                         @foreach (var zipDoc in (List<DMS.Models.Document>)ViewBag.ZipFiles)
                         {
                             <div class="drive-item folder-item" style="cursor: pointer;">
-                                <div class="drive-item-icon folder-icon" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">
+                                <div class="drive-item-icon folder-icon" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">
                                     <span class="material-symbols-outlined">folder_zip</span>
                                 </div>
-                                <div class="drive-item-name" title="@zipDoc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">@zipDoc.Title</div>
-                                <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id })'">
+                                <div class="drive-item-name" title="@zipDoc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">@zipDoc.Title</div>
+                                <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = zipDoc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">
                                     @zipDoc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))
                                 </div>
                                 <div class="drive-item-menu">
@@ -168,7 +193,7 @@ else
                                         <span class="material-symbols-outlined">more_vert</span>
                                     </button>
                                     <div class="drive-menu-dropdown" id="documentMenu@(zipDoc.Id)" style="display: none;">
-                                        <a href="@Url.Action("Preview", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                        <a href="@Url.Action("Preview", "Document", new { id = zipDoc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })" class="drive-menu-item" onclick="event.stopPropagation();">
                                             <span class="material-symbols-outlined">visibility</span>
                                             <span>Xem</span>
                                         </a>
@@ -176,22 +201,25 @@ else
                                             <span class="material-symbols-outlined">download</span>
                                             <span>Tải xuống</span>
                                         </a>
-                                        <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@zipDoc.Id, '@zipDoc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
-                                            <span class="material-symbols-outlined">share</span>
-                                            <span>Chia sẻ</span>
-                                        </button>
-                                        <a href="@Url.Action("Edit", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
-                                            <span class="material-symbols-outlined">edit</span>
-                                            <span>Sửa</span>
-                                        </a>
-                                        <form method="post" action="@Url.Action("Delete", "Document", new { id = zipDoc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa file ZIP này?');" onclick="event.stopPropagation();">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@zipDoc.Id" />
-                                            <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
-                                                <span class="material-symbols-outlined">delete</span>
-                                                <span>Xóa</span>
+                                        @if (!isStudent)
+                                        {
+                                            <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@zipDoc.Id, '@zipDoc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                                <span class="material-symbols-outlined">share</span>
+                                                <span>Chia sẻ</span>
                                             </button>
-                                        </form>
+                                            <a href="@Url.Action("Edit", "Document", new { id = zipDoc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">edit</span>
+                                                <span>Sửa</span>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "Document", new { id = zipDoc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa file ZIP này?');" onclick="event.stopPropagation();">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@zipDoc.Id" />
+                                                <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                    <span class="material-symbols-outlined">delete</span>
+                                                    <span>Xóa</span>
+                                                </button>
+                                            </form>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -218,17 +246,17 @@ else
                             else if (fileExtension == "xls" || fileExtension == "xlsx") { fileIcon = "table_chart"; iconColor = "green"; }
 
                             <div class="drive-item document-item">
-                                <div class="drive-item-icon document-icon @iconColor" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">
+                                <div class="drive-item-icon document-icon @iconColor" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">
                                     <span class="material-symbols-outlined">@fileIcon</span>
                                 </div>
-                                <div class="drive-item-name" title="@doc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">@doc.Title</div>
-                                <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id })'">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</div>
+                                <div class="drive-item-name" title="@doc.Title" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">@doc.Title</div>
+                                <div class="drive-item-meta" onclick="window.location.href='@Url.Action("Preview", "Document", new { id = doc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })'">@doc.UploadDate.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("vi-VN"))</div>
                                 <div class="drive-item-menu">
                                     <button type="button" class="drive-menu-btn" onclick="event.stopPropagation(); toggleDocumentMenu(@doc.Id)">
                                         <span class="material-symbols-outlined">more_vert</span>
                                     </button>
                                     <div class="drive-menu-dropdown" id="documentMenu@(doc.Id)" style="display: none;">
-                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                        <a href="@Url.Action("Preview", "Document", new { id = doc.Id, returnUrl = Url.Action("CourseDetails", "Home", new { id = course?.Id }) })" class="drive-menu-item" onclick="event.stopPropagation();">
                                             <span class="material-symbols-outlined">visibility</span>
                                             <span>Xem</span>
                                         </a>
@@ -236,22 +264,25 @@ else
                                             <span class="material-symbols-outlined">download</span>
                                             <span>Tải xuống</span>
                                         </a>
-                                        <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@doc.Id, '@doc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
-                                            <span class="material-symbols-outlined">share</span>
-                                            <span>Chia sẻ</span>
-                                        </button>
-                                        <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
-                                            <span class="material-symbols-outlined">edit</span>
-                                            <span>Sửa</span>
-                                        </a>
-                                        <form method="post" action="@Url.Action("Delete", "Document", new { id = doc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa tài liệu này?');" onclick="event.stopPropagation();">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@doc.Id" />
-                                            <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
-                                                <span class="material-symbols-outlined">delete</span>
-                                                <span>Xóa</span>
+                                        @if (!isStudent)
+                                        {
+                                            <button type="button" class="drive-menu-item" onclick="event.stopPropagation(); openShareModal(@doc.Id, '@doc.Title.Replace("'", "\\'")')" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #111418;">
+                                                <span class="material-symbols-outlined">share</span>
+                                                <span>Chia sẻ</span>
                                             </button>
-                                        </form>
+                                            <a href="@Url.Action("Edit", "Document", new { id = doc.Id })" class="drive-menu-item" onclick="event.stopPropagation();">
+                                                <span class="material-symbols-outlined">edit</span>
+                                                <span>Sửa</span>
+                                            </a>
+                                            <form method="post" action="@Url.Action("Delete", "Document", new { id = doc.Id })" style="display: inline;" onsubmit="return confirm('Bạn có chắc muốn xóa tài liệu này?');" onclick="event.stopPropagation();">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@doc.Id" />
+                                                <button type="submit" class="drive-menu-item" style="width: 100%; border: none; background: none; text-align: left; padding: 8px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc2626;">
+                                                    <span class="material-symbols-outlined">delete</span>
+                                                    <span>Xóa</span>
+                                                </button>
+                                            </form>
+                                        }
                                     </div>
                                 </div>
                             </div>

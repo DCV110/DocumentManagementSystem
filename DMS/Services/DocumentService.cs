@@ -413,10 +413,10 @@ namespace DMS.Services
             else if (filter == "approved")
             {
                 // Show documents that have been approved for public sharing (including those that were unpublished)
-                // This includes: documents with PublicShareApproved = true OR documents with PublicShareToken (previously shared)
+                // This includes: documents with PublicShareApproved = true (regardless of IsPublicShared or PublicShareRequested)
+                // OR documents that are approved and assigned to a course
                 query = query.Where(d => 
-                    (d.PublicShareApproved && d.PublicShareRequested) || 
-                    (!string.IsNullOrEmpty(d.PublicShareToken) && d.PublicShareRequested) ||
+                    d.PublicShareApproved || 
                     (d.Status == DocumentStatus.Approved && d.CourseId != null));
             }
             else if (filter == "rejected")
@@ -531,10 +531,24 @@ namespace DMS.Services
                 return false;
             }
 
+            // Check if document is already public
+            if (document.IsPublicShared && document.PublicShareApproved)
+            {
+                return false; // Already public, no need to approve again
+            }
+
+            // Approve the pending request
             document.PublicShareRequested = false;
             document.PublicShareApproved = true;
             document.IsPublicShared = true;
             document.Status = DocumentStatus.Approved;
+            
+            // Generate token if not exists
+            if (string.IsNullOrEmpty(document.PublicShareToken))
+            {
+                document.PublicShareToken = Guid.NewGuid().ToString("N");
+            }
+            
             await _context.SaveChangesAsync();
             return true;
         }
@@ -548,6 +562,15 @@ namespace DMS.Services
                 return false;
             }
 
+            // Only reject if the document is pending approval (not already approved and public)
+            // If document is already public (IsPublicShared = true and PublicShareApproved = true),
+            // we should not reject it, only reject pending requests
+            if (document.IsPublicShared && document.PublicShareApproved)
+            {
+                return false; // Cannot reject an already public document
+            }
+
+            // Reject the pending request
             document.PublicShareRequested = false;
             document.PublicShareApproved = false;
             document.IsPublicShared = false;
@@ -565,8 +588,12 @@ namespace DMS.Services
                 return false;
             }
 
+            // Only set IsPublicShared = false, keep PublicShareApproved = true
+            // because the document was already approved, just not public anymore
+            // This prevents it from appearing in "pending" tab
             document.IsPublicShared = false;
-            document.PublicShareApproved = false;
+            // Keep PublicShareApproved = true (document was already approved)
+            // Keep PublicShareRequested = false (no longer requesting, was already approved)
             // Keep PublicShareToken in case they want to republish later
             await _context.SaveChangesAsync();
             return true;

@@ -40,6 +40,18 @@ else
     <!-- Header -->
     <div class="content-header">
         <div class="header-title-section">
+            @{
+                var returnUrl = ViewBag.ReturnUrl as string;
+            }
+            @if (!string.IsNullOrEmpty(returnUrl))
+            {
+                <div style="margin-bottom: 8px;">
+                    <a href="@returnUrl" style="display: inline-flex; align-items: center; gap: 8px; color: #6b7280; text-decoration: none; font-size: 14px; transition: color 0.2s;" onmouseover="this.style.color='#111418'" onmouseout="this.style.color='#6b7280'">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">arrow_back</span>
+                        <span>Quay lại khóa học</span>
+                    </a>
+                </div>
+            }
             <h1>@document?.Title</h1>
             <p>@document?.Course?.CourseName • @document?.UploadDate.ToString("dd/MM/yyyy")</p>
         </div>

@@ -53,6 +53,13 @@ else
             <span>@TempData["ErrorMessage"]</span>
         </div>
     }
+    @if (TempData["InfoMessage"] != null)
+    {
+        <div style="margin: 20px 24px; padding: 16px 20px; background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; color: #2563eb; display: flex; align-items: center; gap: 12px;">
+            <span class="material-symbols-outlined" style="font-size: 24px;">info</span>
+            <span>@TempData["InfoMessage"]</span>
+        </div>
+    }
 
     <!-- Content Body -->
     <div class="content-body">

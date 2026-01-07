@@ -125,7 +125,11 @@
                 {
                     var colorIndex = index % colors.Length;
                     var iconIndex = index % icons.Length;
-                    var docCount = course.Documents?.Count ?? 0;
+                    // Lấy số lượng tài liệu từ dictionary (chỉ file được chia sẻ vào khóa học, không phải file public)
+                    var courseDocumentCounts = ViewBag.CourseDocumentCounts as Dictionary<int, int>;
+                    var docCount = courseDocumentCounts != null && courseDocumentCounts.ContainsKey(course.Id) 
+                        ? courseDocumentCounts[course.Id] 
+                        : 0;
                     <div class="course-card">
                         <div class="course-header">
                             <div class="course-info">
@@ -140,7 +144,7 @@
                         </div>
                         <div class="course-footer" style="margin-top: 12px;">
                             <span>@docCount tài liệu</span>
-                            <a href="@Url.Action("Library", "Document", new { courseId = course.Id })" style="color: #0959aa; text-decoration: none;">
+                            <a href="@Url.Action("CourseDetails", "Home", new { id = course.Id })" style="color: #0959aa; text-decoration: none;">
                                 Xem tài liệu →
                             </a>
                         </div>
