@@ -2,6 +2,7 @@
 using DMS.Models;
 using DMS.Services.Interfaces;
 using DMS.ViewModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.IO;
 using System.IO.Compression;
@@ -12,11 +13,13 @@ namespace DMS.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IFolderService _folderService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public DocumentService(ApplicationDbContext context, IFolderService folderService)
+        public DocumentService(ApplicationDbContext context, IFolderService folderService, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _folderService = folderService;
+            _userManager = userManager;
         }
 
         // Check for duplicate document
@@ -53,6 +56,29 @@ namespace DMS.Services
             if (existingDocument == null)
             {
                 throw new ArgumentException("Không tìm thấy tài liệu cần thay thế");
+            }
+
+            // Check storage limit: calculate additional bytes needed (new file size - old file size)
+            // If new file is smaller, no check needed. If larger, check if it exceeds TOTAL storage limit.
+            var additionalBytes = model.File.Length - existingDocument.FileSize;
+            if (additionalBytes > 0)
+            {
+                var canReplace = await CheckStorageLimitAsync(userId, additionalBytes);
+                if (!canReplace)
+                {
+                    var used = await GetStorageUsedAsync(userId);
+                    var limit = GetStorageLimit(userId);
+                    var usedGB = used / (1024.0 * 1024.0 * 1024.0);
+                    var limitGB = limit / (1024.0 * 1024.0 * 1024.0);
+                    var additionalMB = additionalBytes / (1024.0 * 1024.0);
+                    var remainingGB = (limit - used) / (1024.0 * 1024.0 * 1024.0);
+                    throw new InvalidOperationException(
+                        $"Không thể thay thế file '{model.File.FileName}'. " +
+                        $"Tổng dung lượng lưu trữ đã sử dụng: {usedGB:F2} GB / {limitGB:F2} GB (giới hạn). " +
+                        $"File mới lớn hơn {additionalMB:F2} MB so với file cũ. " +
+                        $"Còn lại: {remainingGB:F2} GB. " +
+                        $"Vui lòng xóa một số file khác để giải phóng dung lượng.");
+                }
             }
 
             // Delete old physical file
@@ -125,6 +151,25 @@ namespace DMS.Services
             if (model.File == null || model.File.Length == 0)
             {
                 throw new ArgumentException("File không được để trống");
+            }
+
+            // Check storage limit (only for instructors, admins have unlimited)
+            // Note: Role check should be done in controller, but we check limit here
+            // This checks TOTAL storage (sum of all files), not per-file limit
+            var canUpload = await CheckStorageLimitAsync(userId, model.File.Length);
+            if (!canUpload)
+            {
+                var used = await GetStorageUsedAsync(userId);
+                var limit = GetStorageLimit(userId);
+                var usedGB = used / (1024.0 * 1024.0 * 1024.0);
+                var limitGB = limit / (1024.0 * 1024.0 * 1024.0);
+                var fileSizeMB = model.File.Length / (1024.0 * 1024.0);
+                var remainingGB = (limit - used) / (1024.0 * 1024.0 * 1024.0);
+                throw new InvalidOperationException(
+                    $"Không thể tải lên file '{model.File.FileName}' ({fileSizeMB:F2} MB). " +
+                    $"Tổng dung lượng lưu trữ đã sử dụng: {usedGB:F2} GB / {limitGB:F2} GB (giới hạn). " +
+                    $"Còn lại: {remainingGB:F2} GB. " +
+                    $"Vui lòng xóa một số file để giải phóng dung lượng.");
             }
 
             // Check for duplicate
@@ -796,6 +841,55 @@ namespace DMS.Services
                 ".rar" => "application/x-rar-compressed",
                 _ => "application/octet-stream"
             };
+        }
+
+        // Storage Management Methods
+        private const long STORAGE_LIMIT_INSTRUCTOR = 15L * 1024 * 1024 * 1024; // 15GB in bytes
+        private const long STORAGE_LIMIT_STUDENT = 0; // Students have no storage limit (they don't upload)
+        private const long STORAGE_LIMIT_ADMIN = long.MaxValue; // Admins have unlimited storage
+
+        public long GetStorageLimit(string userId)
+        {
+            // Get user and check role
+            var user = _userManager.FindByIdAsync(userId).Result;
+            if (user == null)
+            {
+                return STORAGE_LIMIT_INSTRUCTOR; // Default
+            }
+
+            var roles = _userManager.GetRolesAsync(user).Result;
+            
+            if (roles.Contains("Admin"))
+            {
+                return STORAGE_LIMIT_ADMIN; // Unlimited for admins
+            }
+            else if (roles.Contains("Instructor"))
+            {
+                return STORAGE_LIMIT_INSTRUCTOR; // 15GB for instructors
+            }
+            else
+            {
+                return STORAGE_LIMIT_STUDENT; // 0 for students (they don't upload)
+            }
+        }
+
+        public async Task<long> GetStorageUsedAsync(string userId)
+        {
+            // Sum all file sizes of non-deleted documents for this user
+            var totalBytes = await _context.Documents
+                .Where(d => d.UserId == userId && !d.IsDeleted)
+                .SumAsync(d => (long?)d.FileSize) ?? 0;
+            
+            return totalBytes;
+        }
+
+        public async Task<bool> CheckStorageLimitAsync(string userId, long additionalBytes)
+        {
+            var used = await GetStorageUsedAsync(userId);
+            var limit = GetStorageLimit(userId);
+            
+            // Check if adding additionalBytes would exceed limit
+            return (used + additionalBytes) <= limit;
         }
     }
 }

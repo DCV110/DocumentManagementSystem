@@ -54,6 +54,47 @@
         </div>
     </div>
 
+    <!-- Storage Usage Card -->
+    @{
+        var storageUsedGB = ViewBag.StorageUsedGB ?? 0.0;
+        var storageLimitGB = ViewBag.StorageLimitGB ?? 15.0;
+        var storagePercentage = ViewBag.StoragePercentage ?? 0.0;
+        var storageColor = storagePercentage >= 90 ? "#dc2626" : storagePercentage >= 70 ? "#f97316" : "#16a34a";
+    }
+    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111418;">Dung lượng lưu trữ</h3>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">Giới hạn: @storageLimitGB.ToString("F2") GB</p>
+            </div>
+            <div style="text-align: right;">
+                <p style="margin: 0; font-size: 24px; font-weight: 700; color: @storageColor;">
+                    @storageUsedGB.ToString("F2") <span style="font-size: 16px; font-weight: 500; color: #6b7280;">GB</span>
+                </p>
+                <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">
+                    @storagePercentage.ToString("F1")% đã sử dụng
+                </p>
+            </div>
+        </div>
+        <div style="width: 100%; height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden;">
+            <div style="width: @storagePercentage.ToString("F1")%; height: 100%; background: @storageColor; transition: width 0.3s ease;"></div>
+        </div>
+        @if (storagePercentage >= 90)
+        {
+            <p style="margin: 12px 0 0 0; font-size: 13px; color: #dc2626; display: flex; align-items: center; gap: 6px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
+                Dung lượng sắp hết! Vui lòng xóa một số file để giải phóng dung lượng.
+            </p>
+        }
+        else if (storagePercentage >= 70)
+        {
+            <p style="margin: 12px 0 0 0; font-size: 13px; color: #f97316; display: flex; align-items: center; gap: 6px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">info</span>
+                Dung lượng đã sử dụng khá nhiều. Hãy cân nhắc xóa các file không cần thiết.
+            </p>
+        }
+    </div>
+
     <!-- Courses Section -->
     <div class="courses-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -242,27 +283,87 @@
                 }
             </tbody>
         </table>
-        <div class="pagination-wrapper">
-            <div class="pagination-info">
-                @if (ViewBag.Documents != null)
-                {
-                    var docs = (List<DMS.Models.Document>)ViewBag.Documents;
-                    <text>Hiển thị <strong>1</strong> đến <strong>@docs.Count</strong> trong số <strong>@(ViewBag.TotalDocuments ?? 0)</strong> kết quả</text>
-                }
+        @{
+            var totalDocs = ViewBag.TotalDocuments ?? 0;
+            var pageSize = ViewBag.PageSize ?? 4;
+            var currentPage = ViewBag.Page ?? 1;
+            var totalPages = ViewBag.TotalPages ?? 1;
+            var startItem = totalDocs > 0 ? ((currentPage - 1) * pageSize) + 1 : 0;
+            var endItem = Math.Min(currentPage * pageSize, totalDocs);
+        }
+        @if (totalDocs > 0)
+        {
+            <div class="pagination-wrapper">
+                <div class="pagination-info">
+                    <text>Hiển thị <strong>@startItem</strong> đến <strong>@endItem</strong> trong số <strong>@totalDocs</strong> kết quả</text>
+                </div>
+                <div class="pagination">
+                    @if (currentPage > 1)
+                    {
+                        <a href="@Url.Action("InstructorDashboard", "Home", new { page = currentPage - 1 })" class="pagination-btn">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="pagination-btn" style="opacity: 0.5; cursor: not-allowed;">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
+                        </span>
+                    }
+                    
+                    @{
+                        var startPage = Math.Max(1, currentPage - 1);
+                        var endPage = Math.Min(totalPages, currentPage + 1);
+                        
+                        // Show first page if not in range
+                        if (startPage > 1)
+                        {
+                            <a href="@Url.Action("InstructorDashboard", "Home", new { page = 1 })" class="pagination-btn">1</a>
+                            if (startPage > 2)
+                            {
+                                <span class="pagination-btn" style="cursor: default;">...</span>
+                            }
+                        }
+                        
+                        // Show pages around current page
+                        for (int i = startPage; i <= endPage; i++)
+                        {
+                            if (i == currentPage)
+                            {
+                                <span class="pagination-btn active">@i</span>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("InstructorDashboard", "Home", new { page = i })" class="pagination-btn">@i</a>
+                            }
+                        }
+                        
+                        // Show last page if not in range
+                        if (endPage < totalPages)
+                        {
+                            if (endPage < totalPages - 1)
+                            {
+                                <span class="pagination-btn" style="cursor: default;">...</span>
+                            }
+                            <a href="@Url.Action("InstructorDashboard", "Home", new { page = totalPages })" class="pagination-btn">@totalPages</a>
+                        }
+                    }
+                    
+                    @if (currentPage < totalPages)
+                    {
+                        <a href="@Url.Action("InstructorDashboard", "Home", new { page = currentPage + 1 })" class="pagination-btn">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="pagination-btn" style="opacity: 0.5; cursor: not-allowed;">
+                            <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
+                        </span>
+                    }
+                </div>
             </div>
-            <div class="pagination">
-                <button class="pagination-btn">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_left</span>
-                </button>
-                <button class="pagination-btn active">1</button>
-                <button class="pagination-btn">2</button>
-                <button class="pagination-btn">3</button>
-                <button class="pagination-btn">...</button>
-                <button class="pagination-btn">
-                    <span class="material-symbols-outlined" style="font-size: 20px;">chevron_right</span>
-                </button>
-            </div>
-        </div>
+        }
     </div>
 </div>
 </div>
@@ -354,4 +455,18 @@
         }
     });
 </script>
+
+<style>
+    /* Ensure pagination links display correctly */
+    .pagination a.pagination-btn {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .pagination a.pagination-btn:hover {
+        text-decoration: none;
+    }
+</style>
 

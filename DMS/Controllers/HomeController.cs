@@ -130,7 +130,7 @@ namespace DMS.Controllers
         }
 
         [Authorize(Roles = "Instructor")]
-        public async Task<IActionResult> InstructorDashboard()
+        public async Task<IActionResult> InstructorDashboard(int page = 1)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
@@ -140,7 +140,19 @@ namespace DMS.Controllers
             var courses = allCourses.Take(3).ToList(); // Lấy 3 khóa học đầu tiên của giảng viên
             var allDocuments = await _documentService.GetDocumentsByUserAsync(user.Id);
             var allFolders = await _folderService.GetFoldersByUserAsync(user.Id);
-            var documents = allDocuments.Take(4).ToList();
+            
+            // Pagination settings
+            const int pageSize = 4;
+            var totalDocuments = allDocuments.Count;
+            var totalPages = (int)Math.Ceiling(totalDocuments / (double)pageSize);
+            page = Math.Max(1, Math.Min(page, totalPages)); // Ensure page is within valid range
+            
+            // Get documents for current page
+            var documents = allDocuments
+                .OrderByDescending(d => d.UploadDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             // Tính số lượng documents và folders cho mỗi course
             var courseItemCounts = new Dictionary<int, int>();
@@ -151,15 +163,30 @@ namespace DMS.Controllers
                 courseItemCounts[course.Id] = documentCount + folderCount;
             }
 
+            // Calculate storage usage
+            var storageUsed = await _documentService.GetStorageUsedAsync(user.Id);
+            var storageLimit = _documentService.GetStorageLimit(user.Id);
+            var storageUsedGB = storageUsed / (1024.0 * 1024.0 * 1024.0);
+            var storageLimitGB = storageLimit / (1024.0 * 1024.0 * 1024.0);
+            var storagePercentage = storageLimit > 0 ? (storageUsed / (double)storageLimit) * 100 : 0;
+
             ViewBag.User = user;
             ViewBag.Courses = courses;
             ViewBag.CourseItemCounts = courseItemCounts;
             ViewBag.Documents = documents;
-            ViewBag.TotalDocuments = allDocuments.Count;
+            ViewBag.TotalDocuments = totalDocuments;
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
+            ViewBag.PageSize = pageSize;
             ViewBag.TotalViews = allDocuments.Sum(d => d.ViewCount);
             ViewBag.TotalDownloads = allDocuments.Sum(d => d.DownloadCount);
             ViewBag.RejectedDocuments = allDocuments.Count(d => d.Status == DocumentStatus.Rejected);
             ViewBag.AllCourses = allCourses; // For share modal - chỉ courses của giảng viên này
+            ViewBag.StorageUsed = storageUsed;
+            ViewBag.StorageLimit = storageLimit;
+            ViewBag.StorageUsedGB = storageUsedGB;
+            ViewBag.StorageLimitGB = storageLimitGB;
+            ViewBag.StoragePercentage = storagePercentage;
 
             return View();
         }
@@ -467,6 +494,10 @@ namespace DMS.Controllers
                 }
             }
 
+            // Check user role for storage limit
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            var isInstructor = await _userManager.IsInRoleAsync(user, "Instructor");
+
             // Upload each file
             foreach (var file in Files)
             {
@@ -478,6 +509,28 @@ namespace DMS.Controllers
                         errors.Add($"File '{file.FileName}' quá lớn (tối đa 50MB)");
                         failCount++;
                         continue;
+                    }
+
+                    // Check TOTAL storage limit for instructors (admins have unlimited)
+                    // This checks the sum of all files, not per-file limit
+                    if (isInstructor && !isAdmin)
+                    {
+                        var canUpload = await _documentService.CheckStorageLimitAsync(user.Id, file.Length);
+                        if (!canUpload)
+                        {
+                            var used = await _documentService.GetStorageUsedAsync(user.Id);
+                            var limit = _documentService.GetStorageLimit(user.Id);
+                            var usedGB = used / (1024.0 * 1024.0 * 1024.0);
+                            var limitGB = limit / (1024.0 * 1024.0 * 1024.0);
+                            var fileSizeMB = file.Length / (1024.0 * 1024.0);
+                            var remainingGB = (limit - used) / (1024.0 * 1024.0 * 1024.0);
+                            errors.Add($"File '{file.FileName}' ({fileSizeMB:F2} MB) không thể tải lên. " +
+                                $"Tổng dung lượng lưu trữ: {usedGB:F2} GB / {limitGB:F2} GB (giới hạn). " +
+                                $"Còn lại: {remainingGB:F2} GB. " +
+                                $"Vui lòng xóa một số file để giải phóng dung lượng.");
+                            failCount++;
+                            continue;
+                        }
                     }
 
                     // Check for duplicate

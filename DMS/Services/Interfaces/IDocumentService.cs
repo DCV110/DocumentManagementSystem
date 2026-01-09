@@ -68,5 +68,10 @@ namespace DMS.Services.Interfaces
         // Helper Methods
         Task<List<Course>> GetAllCoursesAsync();
         Task<List<Folder>> GetAllFoldersAsync();
+        
+        // Storage Management
+        Task<long> GetStorageUsedAsync(string userId); // Returns bytes used
+        Task<bool> CheckStorageLimitAsync(string userId, long additionalBytes); // Check if user can upload additional bytes
+        long GetStorageLimit(string userId); // Returns storage limit in bytes (15GB for instructors)
     }
 }
