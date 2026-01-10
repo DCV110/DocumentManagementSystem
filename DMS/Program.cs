@@ -58,6 +58,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IQuizService, QuizService>();
 
 // Cấu hình để tăng giới hạn kích thước request cho upload nhiều file
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>

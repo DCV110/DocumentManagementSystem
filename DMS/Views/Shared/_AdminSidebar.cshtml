@@ -60,6 +60,10 @@
             <span class="material-symbols-outlined">folder_managed</span>
             <span>Quản lý tài liệu</span>
         </a>
+        <a href="@Url.Action("Index", "Quiz")" class="nav-item @(currentController == "Quiz" ? "active" : "")">
+            <span class="material-symbols-outlined">quiz</span>
+            <span>Quản lý bài kiểm tra</span>
+        </a>
         <a href="@Url.Action("Reports", "Admin")" class="nav-item @(currentAction == "Reports" && currentController == "Admin" ? "active" : "")">
             <span class="material-symbols-outlined">bar_chart</span>
             <span>Báo cáo</span>

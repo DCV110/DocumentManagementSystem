@@ -31,6 +31,10 @@
             <span class="material-symbols-outlined">folder</span>
             <span>Tài liệu của tôi</span>
         </a>
+        <a href="@Url.Action("Index", "Quiz")" class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Quiz" ? "active" : "")">
+            <span class="material-symbols-outlined">quiz</span>
+            <span>Bài kiểm tra</span>
+        </a>
         <a href="@Url.Action("RecycleBin", "Document")" class="nav-item @(currentAction == "RecycleBin" ? "active" : "")">
             <span class="material-symbols-outlined">delete</span>
             <span>Thùng rác</span>

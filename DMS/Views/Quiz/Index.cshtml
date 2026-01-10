@@ -1,0 +1,564 @@
+@{
+    ViewData["Title"] = "Bài kiểm tra";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isAdmin)
+{
+    <partial name="_AdminSidebar" />
+}
+else
+{
+    <partial name="_InstructorSidebar" />
+}
+
+<div class="main-content">
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Bài kiểm tra</h1>
+            <p>Quản lý các bài kiểm tra trắc nghiệm của bạn</p>
+        </div>
+        <div class="header-actions">
+            <a href="@Url.Action("Create", "Quiz")" class="btn btn-primary">
+                <span class="material-symbols-outlined">add</span>
+                Tạo bài kiểm tra mới
+            </a>
+            <partial name="_NotificationDropdown" />
+        </div>
+    </div>
+
+    <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" style="margin-bottom: 20px;">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger" style="margin-bottom: 20px;">
+                @TempData["ErrorMessage"]
+            </div>
+        }
+
+        @{
+            var quizzes = ViewBag.Quizzes as List<DMS.Models.Quiz> ?? new List<DMS.Models.Quiz>();
+        }
+
+        @if (quizzes.Any())
+        {
+            <div class="quiz-grid">
+                @foreach (var quiz in quizzes)
+                {
+                    <div class="quiz-card">
+                        <div class="quiz-card-header">
+                            <div class="quiz-icon">
+                                <span class="material-symbols-outlined">quiz</span>
+                            </div>
+                            <div class="quiz-status-badge">
+                                @if (quiz.IsPublished)
+                                {
+                                    <span class="badge badge-success">
+                                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">check_circle</span>
+                                        Đã công bố
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-warning">
+                                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">schedule</span>
+                                        Chưa công bố
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        
+                        <div class="quiz-card-body">
+                            <h3 class="quiz-title">@quiz.Title</h3>
+                            @if (!string.IsNullOrEmpty(quiz.Description))
+                            {
+                                <p class="quiz-description">@quiz.Description</p>
+                            }
+                            
+                            @if (ViewBag.IsAdmin == true)
+                            {
+                                <div class="quiz-creator-info" style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #0284c7;">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">person</span>
+                                        <strong>Giảng viên:</strong> @(quiz.Creator?.FullName ?? "N/A") (@(quiz.Creator?.Email ?? "N/A"))
+                                    </div>
+                                </div>
+                            }
+                            
+                            <div class="quiz-info-grid">
+                                <div class="quiz-info-item">
+                                    <span class="material-symbols-outlined quiz-info-icon">book</span>
+                                    <div>
+                                        <div class="quiz-info-label">Khóa học</div>
+                                        <div class="quiz-info-value">@(quiz.Course?.CourseName ?? "Chưa gán")</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="quiz-info-item">
+                                    <span class="material-symbols-outlined quiz-info-icon">help</span>
+                                    <div>
+                                        <div class="quiz-info-label">Số câu hỏi</div>
+                                        <div class="quiz-info-value">@(quiz.Questions?.Count ?? 0) câu</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="quiz-info-item">
+                                    <span class="material-symbols-outlined quiz-info-icon">schedule</span>
+                                    <div>
+                                        <div class="quiz-info-label">Thời gian</div>
+                                        <div class="quiz-info-value">@(quiz.TimeLimitMinutes > 0 ? $"{quiz.TimeLimitMinutes} phút" : "Không giới hạn")</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="quiz-info-item">
+                                    <span class="material-symbols-outlined quiz-info-icon">calendar_today</span>
+                                    <div>
+                                        <div class="quiz-info-label">Ngày tạo</div>
+                                        <div class="quiz-info-value">@quiz.CreatedDate.ToString("dd/MM/yyyy")</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="quiz-card-footer">
+                            <div class="quiz-actions">
+                                @{
+                                    var isAdminUser = ViewBag.IsAdmin == true;
+                                    var currentUserId = ViewBag.CurrentUserId as string;
+                                    var canEdit = isAdminUser || quiz.CreatedBy == currentUserId;
+                                }
+                                @if (canEdit)
+                                {
+                                    <a href="@Url.Action("Edit", "Quiz", new { id = quiz.Id })" class="quiz-action-btn edit-btn">
+                                        <span class="material-symbols-outlined">edit</span>
+                                        Sửa
+                                    </a>
+                                }
+                                @if (quiz.IsPublished)
+                                {
+                                    <a href="@Url.Action("Results", "Quiz", new { id = quiz.Id })" class="quiz-action-btn results-btn">
+                                        <span class="material-symbols-outlined">bar_chart</span>
+                                        Kết quả
+                                    </a>
+                                    @if (canEdit)
+                                    {
+                                        <form method="post" action="@Url.Action("Unpublish", "Quiz", new { id = quiz.Id })" style="display: inline;" id="unpublishForm_@quiz.Id">
+                                            @Html.AntiForgeryToken()
+                                            <button type="button" class="quiz-action-btn unpublish-btn" onclick="handleUnpublish(@quiz.Id)">
+                                                <span class="material-symbols-outlined">unpublished</span>
+                                                Bỏ công bố
+                                            </button>
+                                        </form>
+                                    }
+                                }
+                                else
+                                {
+                                    @if (canEdit)
+                                    {
+                                        <form method="post" action="@Url.Action("Publish", "Quiz", new { id = quiz.Id })" style="display: inline;" id="publishForm_@quiz.Id" onsubmit="return publishQuizFromIndex(event, @quiz.Id);">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="courseId" id="publishCourseId_@quiz.Id" value="@(quiz.CourseId ?? 0)" />
+                                            <button type="submit" class="quiz-action-btn publish-btn">
+                                                <span class="material-symbols-outlined">publish</span>
+                                                Công bố
+                                            </button>
+                                        </form>
+                                    }
+                                }
+                                @if (canEdit)
+                                {
+                                    <form method="post" action="@Url.Action("Delete", "Quiz", new { id = quiz.Id })" style="display: inline;" id="deleteForm_@quiz.Id">
+                                        @Html.AntiForgeryToken()
+                                        <button type="button" class="quiz-action-btn delete-btn" onclick="handleDelete(@quiz.Id)">
+                                            <span class="material-symbols-outlined">delete</span>
+                                            Xóa
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <span class="material-symbols-outlined" style="font-size: 64px; color: #d1d5db;">quiz</span>
+                <h3>Chưa có bài kiểm tra nào</h3>
+                <p>Tạo bài kiểm tra đầu tiên của bạn để bắt đầu</p>
+                <a href="@Url.Action("Create", "Quiz")" class="btn btn-primary">Tạo bài kiểm tra mới</a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .quiz-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 24px;
+        margin-top: 24px;
+    }
+
+    .quiz-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .quiz-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+        border-color: #0959aa;
+    }
+
+    .quiz-card-header {
+        background: linear-gradient(135deg, #0959aa 0%, #0d6efd 100%);
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .quiz-icon {
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .quiz-icon .material-symbols-outlined {
+        color: white;
+        font-size: 28px;
+    }
+
+    .quiz-status-badge {
+        display: flex;
+        align-items: center;
+    }
+
+    .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-success {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        backdrop-filter: blur(10px);
+    }
+
+    .badge-warning {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        backdrop-filter: blur(10px);
+    }
+
+    .quiz-card-body {
+        padding: 24px;
+    }
+
+    .quiz-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111418;
+        margin: 0 0 8px 0;
+        line-height: 1.4;
+    }
+
+    .quiz-description {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0 0 20px 0;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .quiz-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .quiz-info-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .quiz-info-icon {
+        color: #0959aa;
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .quiz-info-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .quiz-info-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111418;
+    }
+
+    .quiz-card-footer {
+        padding: 16px 24px;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .quiz-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .quiz-action-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .edit-btn {
+        background: #f0f9ff;
+        color: #0959aa;
+        border: 1px solid #bae6fd;
+    }
+
+    .edit-btn:hover {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+    }
+
+    .results-btn {
+        background: #dcfce7;
+        color: #16a34a;
+        border: 1px solid #86efac;
+    }
+
+    .results-btn:hover {
+        background: #bbf7d0;
+        border-color: #4ade80;
+    }
+
+    .delete-btn {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fca5a5;
+    }
+
+    .delete-btn:hover {
+        background: #fee2e2;
+        border-color: #f87171;
+    }
+
+    .quiz-action-btn .material-symbols-outlined {
+        font-size: 18px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 20px;
+        background: white;
+        border-radius: 16px;
+        border: 2px dashed #e5e7eb;
+    }
+
+    .empty-state .material-symbols-outlined {
+        font-size: 80px;
+        color: #d1d5db;
+        margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+        margin: 16px 0 8px;
+        color: #111418;
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        color: #6b7280;
+        margin-bottom: 24px;
+        font-size: 15px;
+    }
+
+    .empty-state .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .alert {
+        padding: 14px 18px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        border: 1px solid;
+    }
+
+    .alert-success {
+        background: #dcfce7;
+        color: #16a34a;
+        border-color: #86efac;
+    }
+
+    .alert-danger {
+        background: #fef2f2;
+        color: #dc2626;
+        border-color: #fca5a5;
+    }
+
+    .alert-info {
+        background: #f0f9ff;
+        color: #0284c7;
+        border-color: #7dd3fc;
+    }
+
+    .btn-primary {
+        background: #0959aa;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background: #084c8f;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(9, 89, 170, 0.2);
+    }
+
+    .btn-primary .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+    .publish-btn {
+        background: #dcfce7;
+        color: #16a34a;
+        border: 1px solid #86efac;
+    }
+
+    .publish-btn:hover {
+        background: #bbf7d0;
+        border-color: #4ade80;
+    }
+
+    .unpublish-btn {
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fcd34d;
+    }
+
+    .unpublish-btn:hover {
+        background: #fde68a;
+        border-color: #fbbf24;
+    }
+</style>
+
+<script>
+    function publishQuizFromIndex(event, quizId) {
+        event.preventDefault();
+        const courseIdInput = document.getElementById('publishCourseId_' + quizId);
+        if (!courseIdInput) {
+            customAlert('Lỗi: Không tìm thấy thông tin khóa học', 'error');
+            return false;
+        }
+        const courseId = courseIdInput.value;
+        if (!courseId || courseId === '0' || courseId === '') {
+            customConfirm('Bài kiểm tra chưa được gán cho khóa học. Bạn có muốn chỉnh sửa để chọn khóa học không?', {
+                title: 'Chưa chọn khóa học',
+                type: 'warning'
+            }).then(function(confirmed) {
+                if (confirmed) {
+                    window.location.href = '@Url.Action("Edit", "Quiz")?id=' + quizId;
+                }
+            });
+            return false;
+        }
+        customConfirm('Bạn có chắc muốn công bố bài kiểm tra này?', {
+            title: 'Công bố bài kiểm tra',
+            type: 'info'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                document.getElementById('publishForm_' + quizId).submit();
+            }
+        });
+        return false;
+    }
+
+    function handleUnpublish(quizId) {
+        customConfirm('Bạn có chắc muốn bỏ công bố bài kiểm tra này? Sinh viên sẽ không thể xem và làm bài nữa.', {
+            title: 'Bỏ công bố bài kiểm tra',
+            type: 'warning',
+            confirmType: 'warning'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                document.getElementById('unpublishForm_' + quizId).submit();
+            }
+        });
+    }
+
+    function handleDelete(quizId) {
+        customConfirm('Bạn có chắc muốn xóa bài kiểm tra này? Hành động này không thể hoàn tác.', {
+            title: 'Xóa bài kiểm tra',
+            type: 'error',
+            confirmType: 'danger'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                document.getElementById('deleteForm_' + quizId).submit();
+            }
+        });
+    }
+</script>
+

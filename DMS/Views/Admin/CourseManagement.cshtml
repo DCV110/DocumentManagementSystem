@@ -123,13 +123,6 @@
                                                 data-instructor="@(course.InstructorId ?? "")">
                                             <span class="material-symbols-outlined">edit</span>
                                         </button>
-                                        <form method="post" action="@Url.Action("DeleteCourse", "Admin")" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa khóa học này?');">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@course.Id" />
-                                            <button type="submit" class="action-btn-small delete-btn" title="Xóa">
-                                                <span class="material-symbols-outlined">delete</span>
-                                            </button>
-                                        </form>
                                     </div>
                                 </td>
                             </tr>

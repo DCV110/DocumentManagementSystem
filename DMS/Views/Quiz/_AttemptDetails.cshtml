@@ -1,0 +1,419 @@
+@model DMS.ViewModels.AttemptDetailsVM
+
+<div class="attempt-details">
+    <!-- Student Info -->
+    <div class="attempt-header">
+        <div class="student-header-info">
+            <div class="student-avatar-large">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+            <div>
+                <h3>@Model.Student.FullName</h3>
+                <p class="student-email">@Model.Student.Email</p>
+            </div>
+        </div>
+        <div class="attempt-score-summary">
+            <div class="score-item">
+                <div class="score-label">Điểm số</div>
+                <div class="score-value-large">
+                    @if (Model.Attempt.ManualScore.HasValue)
+                    {
+                        <span>@Model.Attempt.ManualScore / @Model.Attempt.MaxScore</span>
+                        <span class="score-badge manual">Chấm thủ công</span>
+                    }
+                    else
+                    {
+                        <span>@(Model.Attempt.TotalScore ?? 0) / @(Model.Attempt.MaxScore ?? 0)</span>
+                    }
+                </div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Phần trăm</div>
+                <div class="score-percentage-large @(Model.Attempt.ScorePercentage >= 80 ? "excellent" : Model.Attempt.ScorePercentage >= 50 ? "good" : "poor")">
+                    @(Model.Attempt.ScorePercentage?.ToString("F1") ?? "0")%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submission Info -->
+    <div class="submission-info">
+        <div class="info-item">
+            <span class="material-symbols-outlined">schedule</span>
+            <div>
+                <div class="info-label">Thời gian nộp</div>
+                <div class="info-value">@(Model.Attempt.SubmittedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")</div>
+            </div>
+        </div>
+        <div class="info-item">
+            <span class="material-symbols-outlined">timer</span>
+            <div>
+                <div class="info-label">Thời gian làm bài</div>
+                <div class="info-value">
+                    @if (Model.Attempt.SubmittedAt.HasValue)
+                    {
+                        var duration = Model.Attempt.SubmittedAt.Value - Model.Attempt.StartedAt;
+                        var minutes = (int)duration.TotalMinutes;
+                        var seconds = duration.Seconds;
+                        <text>@minutes phút @seconds giây</text>
+                    }
+                    else
+                    {
+                        <text>N/A</text>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions and Answers -->
+    <div class="questions-section">
+        <h4>Câu trả lời</h4>
+        @{
+            var questions = Model.Quiz.Questions?.OrderBy(q => q.QuestionOrder).ToList() ?? new List<Question>();
+            var answers = Model.Attempt.Answers?.ToList() ?? new List<StudentAnswer>();
+        }
+        @for (int i = 0; i < questions.Count; i++)
+        {
+            var question = questions[i];
+            var answer = answers.FirstOrDefault(a => a.QuestionId == question.Id);
+            var isCorrect = answer?.IsCorrect ?? false;
+            var selectedOption = answer?.SelectedOption;
+            var correctOption = question.Options?.FirstOrDefault(o => o.IsCorrect);
+            var pointsEarned = answer?.PointsEarned ?? 0;
+            
+            <div class="question-detail-item @(isCorrect ? "correct" : "incorrect")">
+                <div class="question-header">
+                    <div class="question-number">Câu @(i + 1)</div>
+                    <div class="question-points">(@question.Points điểm)</div>
+                    @if (isCorrect)
+                    {
+                        <span class="answer-status correct-badge">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            Đúng (+@pointsEarned điểm)
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="answer-status incorrect-badge">
+                            <span class="material-symbols-outlined">cancel</span>
+                            Sai (0 điểm)
+                        </span>
+                    }
+                </div>
+                <div class="question-text">@question.QuestionText</div>
+                
+                <div class="options-list">
+                    @foreach (var option in (question.Options?.OrderBy(o => o.OptionOrder).ToList() ?? new List<QuestionOption>()))
+                    {
+                        var isSelected = selectedOption?.Id == option.Id;
+                        var isCorrectOption = option.IsCorrect;
+                        var optionClass = "";
+                        if (isSelected && isCorrectOption)
+                            optionClass = "option-correct-selected";
+                        else if (isSelected && !isCorrectOption)
+                            optionClass = "option-incorrect-selected";
+                        else if (!isSelected && isCorrectOption)
+                            optionClass = "option-correct-not-selected";
+                        else
+                            optionClass = "option-normal";
+                        
+                        <div class="option-item @optionClass">
+                            <div class="option-label">@(option.OptionLabel ?? "A").</div>
+                            <div class="option-text">@option.OptionText</div>
+                            @if (isSelected)
+                            {
+                                <span class="option-indicator selected">Đã chọn</span>
+                            }
+                            @if (isCorrectOption)
+                            {
+                                <span class="option-indicator correct">Đáp án đúng</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .attempt-details {
+        padding: 0;
+    }
+
+    .attempt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px;
+        background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+        border-radius: 12px;
+        margin-bottom: 24px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+    }
+
+    .student-header-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .student-avatar-large {
+        width: 64px;
+        height: 64px;
+        background: rgba(255, 255, 255, 0.25);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-avatar-large .material-symbols-outlined {
+        font-size: 32px;
+        color: #ffffff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .attempt-header h3 {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .student-email {
+        margin: 0;
+        color: #e0e7ff;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .attempt-score-summary {
+        display: flex;
+        gap: 32px;
+    }
+
+    .score-item {
+        text-align: center;
+    }
+
+    .score-label {
+        font-size: 13px;
+        color: #e0e7ff;
+        margin-bottom: 8px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .score-value-large {
+        font-size: 32px;
+        font-weight: 700;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .score-percentage-large {
+        font-size: 32px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .score-percentage-large.excellent {
+        color: #fef08a;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 8px 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .score-percentage-large.good {
+        color: #fde047;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 8px 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .score-percentage-large.poor {
+        color: #fca5a5;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 8px 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .submission-info {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .info-item {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .info-item .material-symbols-outlined {
+        color: #0959aa;
+        font-size: 24px;
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .info-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111418;
+    }
+
+    .questions-section h4 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111418;
+        margin-bottom: 16px;
+    }
+
+    .question-detail-item {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+
+    .question-detail-item.correct {
+        border-color: #86efac;
+        background: #f0fdf4;
+    }
+
+    .question-detail-item.incorrect {
+        border-color: #fca5a5;
+        background: #fef2f2;
+    }
+
+    .question-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .question-number {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0959aa;
+    }
+
+    .question-points {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .answer-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .correct-badge {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .incorrect-badge {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .question-text {
+        font-size: 15px;
+        color: #111418;
+        margin-bottom: 16px;
+        line-height: 1.6;
+    }
+
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        background: white;
+    }
+
+    .option-item.option-correct-selected {
+        border-color: #16a34a;
+        background: #dcfce7;
+    }
+
+    .option-item.option-incorrect-selected {
+        border-color: #dc2626;
+        background: #fee2e2;
+    }
+
+    .option-item.option-correct-not-selected {
+        border-color: #86efac;
+        background: #f0fdf4;
+    }
+
+    .option-label {
+        font-weight: 700;
+        min-width: 24px;
+        color: #0959aa;
+    }
+
+    .option-text {
+        flex: 1;
+        font-size: 14px;
+        color: #111418;
+    }
+
+    .option-indicator {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .option-indicator.selected {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .option-indicator.correct {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+</style>
+

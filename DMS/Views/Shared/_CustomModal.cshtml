@@ -1,0 +1,279 @@
+<!-- Custom Modal -->
+<div id="customModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-overlay"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <span class="material-symbols-outlined custom-modal-icon" id="modalIcon"></span>
+            <h3 class="custom-modal-title" id="modalTitle">Xác nhận</h3>
+        </div>
+        <div class="custom-modal-body">
+            <p id="modalMessage">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+        </div>
+        <div class="custom-modal-footer">
+            <button type="button" class="custom-modal-btn custom-modal-btn-cancel" id="modalCancelBtn">Hủy</button>
+            <button type="button" class="custom-modal-btn custom-modal-btn-confirm" id="modalConfirmBtn">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .custom-modal-content {
+        position: relative;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 480px;
+        width: 90%;
+        max-height: 90vh;
+        overflow: hidden;
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @@keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .custom-modal-header {
+        padding: 24px 24px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .custom-modal-icon {
+        font-size: 28px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+    }
+
+    .custom-modal-icon.info {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .custom-modal-icon.warning {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    .custom-modal-icon.error {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .custom-modal-icon.success {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .custom-modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111418;
+        margin: 0;
+    }
+
+    .custom-modal-body {
+        padding: 20px 24px;
+    }
+
+    .custom-modal-body p {
+        font-size: 15px;
+        color: #374151;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .custom-modal-footer {
+        padding: 16px 24px 24px;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .custom-modal-btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .custom-modal-btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .custom-modal-btn-cancel:hover {
+        background: #e5e7eb;
+    }
+
+    .custom-modal-btn-confirm {
+        background: #0959aa;
+        color: white;
+    }
+
+    .custom-modal-btn-confirm:hover {
+        background: #084c8f;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(9, 89, 170, 0.2);
+    }
+
+    .custom-modal-btn-confirm.warning {
+        background: #d97706;
+    }
+
+    .custom-modal-btn-confirm.warning:hover {
+        background: #b45309;
+    }
+
+    .custom-modal-btn-confirm.danger {
+        background: #dc2626;
+    }
+
+    .custom-modal-btn-confirm.danger:hover {
+        background: #b91c1c;
+    }
+</style>
+
+<script>
+    let modalResolve = null;
+
+    function showCustomModal(options) {
+        const modal = document.getElementById('customModal');
+        const icon = document.getElementById('modalIcon');
+        const title = document.getElementById('modalTitle');
+        const message = document.getElementById('modalMessage');
+        const cancelBtn = document.getElementById('modalCancelBtn');
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+
+        // Set content
+        title.textContent = options.title || 'Xác nhận';
+        message.textContent = options.message || 'Bạn có chắc chắn muốn thực hiện hành động này?';
+        
+        // Set icon
+        const iconType = options.type || 'info';
+        icon.className = 'material-symbols-outlined custom-modal-icon ' + iconType;
+        
+        switch(iconType) {
+            case 'warning':
+                icon.textContent = 'warning';
+                break;
+            case 'error':
+                icon.textContent = 'error';
+                break;
+            case 'success':
+                icon.textContent = 'check_circle';
+                break;
+            default:
+                icon.textContent = 'info';
+        }
+
+        // Set button styles
+        confirmBtn.className = 'custom-modal-btn custom-modal-btn-confirm';
+        if (options.confirmType) {
+            confirmBtn.classList.add(options.confirmType);
+        }
+
+        // Show/hide cancel button
+        if (options.showCancel !== false) {
+            cancelBtn.style.display = 'inline-flex';
+        } else {
+            cancelBtn.style.display = 'none';
+        }
+
+        // Show modal
+        modal.style.display = 'flex';
+
+        // Return promise
+        return new Promise((resolve) => {
+            modalResolve = resolve;
+
+            const handleConfirm = () => {
+                modal.style.display = 'none';
+                resolve(true);
+                cleanup();
+            };
+
+            const handleCancel = () => {
+                modal.style.display = 'none';
+                resolve(false);
+                cleanup();
+            };
+
+            const cleanup = () => {
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                modalResolve = null;
+            };
+
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+
+            // Close on overlay click
+            modal.querySelector('.custom-modal-overlay').addEventListener('click', handleCancel);
+        });
+    }
+
+    // Replace alert
+    window.customAlert = function(message, type = 'info') {
+        return showCustomModal({
+            title: type === 'error' ? 'Lỗi' : type === 'warning' ? 'Cảnh báo' : 'Thông báo',
+            message: message,
+            type: type,
+            showCancel: false,
+            confirmType: type === 'error' ? 'danger' : type === 'warning' ? 'warning' : null
+        });
+    };
+
+    // Replace confirm
+    window.customConfirm = function(message, options = {}) {
+        return showCustomModal({
+            title: options.title || 'Xác nhận',
+            message: message,
+            type: options.type || 'warning',
+            confirmType: options.confirmType || 'warning'
+        });
+    };
+</script>
+

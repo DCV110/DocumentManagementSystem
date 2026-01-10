@@ -1,0 +1,400 @@
+@model DMS.ViewModels.QuizCreateVM
+@{
+    ViewData["Title"] = "Chỉnh sửa bài kiểm tra";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = false;
+    if (currentUser != null)
+    {
+        var roles = await UserManager.GetRolesAsync(currentUser);
+        isAdmin = roles.Contains("Admin");
+    }
+}
+
+@if (isAdmin)
+{
+    <partial name="_AdminSidebar" />
+}
+else
+{
+    <partial name="_InstructorSidebar" />
+}
+
+<div class="main-content">
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Chỉnh sửa bài kiểm tra</h1>
+            <p>Cập nhật thông tin và câu hỏi của bài kiểm tra</p>
+        </div>
+        <div class="header-actions">
+            <a href="@Url.Action("Index", "Quiz")" class="btn btn-outline">Hủy</a>
+            <partial name="_NotificationDropdown" />
+        </div>
+    </div>
+
+    <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+        }
+        @if (TempData["InfoMessage"] != null)
+        {
+            <div class="alert alert-info">@TempData["InfoMessage"]</div>
+        }
+        
+        @if (ViewBag.HasAttempts == true)
+        {
+            <div class="alert alert-warning" style="background: #fef3c7; color: #d97706; padding: 16px 20px; border-radius: 10px; border: 1px solid #fcd34d; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px;">
+                <span class="material-symbols-outlined" style="font-size: 24px; flex-shrink: 0;">warning</span>
+                <div style="flex: 1;">
+                    <strong style="display: block; margin-bottom: 4px;">Cảnh báo: Bài kiểm tra đã có người làm</strong>
+                    <p style="margin: 0; font-size: 14px;">
+                        Bài kiểm tra này đã có <strong>@(ViewBag.SubmittedAttemptsCount ?? 0)</strong> lượt làm bài đã nộp. 
+                        Việc chỉnh sửa có thể ảnh hưởng đến kết quả đã chấm và tính công bằng cho các sinh viên đã làm bài trước đó.
+                        Vui lòng cân nhắc kỹ trước khi thay đổi.
+                    </p>
+                </div>
+            </div>
+        }
+
+        <form asp-controller="Quiz" asp-action="Edit" method="post" id="quizForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@ViewBag.QuizId" />
+
+            <div class="form-section" style="background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+                <h3 style="margin-bottom: 20px; color: #111418;">Thông tin chung</h3>
+                
+                <div class="form-group">
+                    <label asp-for="Title" class="form-label">Tiêu đề <span class="required">*</span></label>
+                    <input asp-for="Title" class="form-control" required />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Description" class="form-label">Mô tả</label>
+                    <textarea asp-for="Description" class="form-control" rows="3">@Model.Description</textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label asp-for="CourseId" class="form-label">Khóa học</label>
+                        <select asp-for="CourseId" class="form-control" id="courseSelect">
+                            <option value="">-- Chọn khóa học --</option>
+                            @if (ViewBag.Courses != null)
+                            {
+                                @foreach (var course in (List<DMS.Models.Course>)ViewBag.Courses)
+                                {
+                                    <option value="@course.Id" selected="@(Model.CourseId == course.Id)">@course.CourseName (@course.CourseCode)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="TimeLimitMinutes" class="form-label">Thời gian làm bài (phút)</label>
+                        <input asp-for="TimeLimitMinutes" type="number" min="0" class="form-control" value="@Model.TimeLimitMinutes" />
+                        <small style="color: #6b7280;">0 = không giới hạn</small>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                        <input asp-for="StartDate" type="datetime-local" class="form-control" value="@(Model.StartDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="EndDate" class="form-label">Ngày kết thúc</label>
+                        <input asp-for="EndDate" type="datetime-local" class="form-control" value="@(Model.EndDate?.ToString("yyyy-MM-ddTHH:mm"))" />
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="MaxAttempts" class="form-label">Số lần làm bài</label>
+                        <input asp-for="MaxAttempts" type="number" min="0" class="form-control" value="@Model.MaxAttempts" />
+                        <small style="color: #6b7280;">0 = không giới hạn</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" style="background: white; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #111418;">Câu hỏi</h3>
+                    <button type="button" class="btn btn-primary" onclick="addQuestion()">
+                        <span class="material-symbols-outlined">add</span>
+                        Thêm câu hỏi
+                    </button>
+                </div>
+
+                <div id="questionsContainer">
+                    @if (Model.Questions != null && Model.Questions.Any())
+                    {
+                        @for (int i = 0; i < Model.Questions.Count; i++)
+                        {
+                            var question = Model.Questions[i];
+                            <div class="question-item" data-question-index="@i" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 16px; background: #f9fafb;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <h4 style="margin: 0; color: #111418;">Câu hỏi @(i + 1)</h4>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(this)">
+                                        <span class="material-symbols-outlined">delete</span>
+                                        Xóa
+                                    </button>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nội dung câu hỏi <span class="required">*</span></label>
+                                    <textarea name="Questions[@i].QuestionText" class="form-control" rows="2" required>@question.QuestionText</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Điểm số</label>
+                                    <input type="number" name="Questions[@i].Points" class="form-control" value="@question.Points" min="1" style="width: 100px;" />
+                                </div>
+                                <div style="margin-top: 16px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <label>Lựa chọn <span class="required">*</span></label>
+                                        <button type="button" class="btn btn-sm btn-outline" onclick="addOption(this)">
+                                            <span class="material-symbols-outlined">add</span>
+                                            Thêm lựa chọn
+                                        </button>
+                                    </div>
+                                    <div class="options-container" data-question-index="@i">
+                                        @if (question.Options != null && question.Options.Any())
+                                        {
+                                            @for (int j = 0; j < question.Options.Count; j++)
+                                            {
+                                                var option = question.Options[j];
+                                                <div class="option-item" style="display: flex; gap: 12px; align-items: center; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+                                                    <input type="checkbox" name="Questions[@i].Options[@j].IsCorrect" value="true" class="correct-checkbox" @(option.IsCorrect ? "checked" : "") onchange="updateCheckboxValue(this)" />
+                                                    <input type="hidden" name="Questions[@i].Options[@j].IsCorrect" value="@(option.IsCorrect ? "true" : "false")" class="is-correct-hidden" />
+                                                    <span style="font-weight: 600; min-width: 24px;">@(option.OptionLabel ?? "A").</span>
+                                                    <input type="text" name="Questions[@i].Options[@j].OptionText" class="form-control" value="@option.OptionText" placeholder="Nhập lựa chọn..." required />
+                                                    <input type="hidden" name="Questions[@i].Options[@j].OptionLabel" value="@(option.OptionLabel ?? "A")" />
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeOption(this)">
+                                                        <span class="material-symbols-outlined">delete</span>
+                                                    </button>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 20px; background: white; border-radius: 12px; border: 1px solid #e5e7eb;">
+                <a href="@Url.Action("Index", "Quiz")" class="btn btn-outline">Hủy</a>
+                <button type="submit" class="btn btn-primary" id="saveQuizBtn">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let questionIndex = @(Model.Questions?.Count ?? 0);
+
+    function addQuestion() {
+        const container = document.getElementById('questionsContainer');
+        const questionHtml = `
+            <div class="question-item" data-question-index="${questionIndex}" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 16px; background: #f9fafb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h4 style="margin: 0; color: #111418;">Câu hỏi ${questionIndex + 1}</h4>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(this)">
+                        <span class="material-symbols-outlined">delete</span>
+                        Xóa
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label>Nội dung câu hỏi <span class="required">*</span></label>
+                    <textarea name="Questions[${questionIndex}].QuestionText" class="form-control" rows="2" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Điểm số</label>
+                    <input type="number" name="Questions[${questionIndex}].Points" class="form-control" value="1" min="1" style="width: 100px;" />
+                </div>
+                <div style="margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <label>Lựa chọn <span class="required">*</span></label>
+                        <button type="button" class="btn btn-sm btn-outline" onclick="addOption(this)">
+                            <span class="material-symbols-outlined">add</span>
+                            Thêm lựa chọn
+                        </button>
+                    </div>
+                    <div class="options-container" data-question-index="${questionIndex}">
+                        <div class="option-item" style="display: flex; gap: 12px; align-items: center; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" name="Questions[${questionIndex}].Options[0].IsCorrect" value="true" class="correct-checkbox" onchange="updateCheckboxValue(this)" />
+                            <input type="hidden" name="Questions[${questionIndex}].Options[0].IsCorrect" value="false" class="is-correct-hidden" />
+                            <span style="font-weight: 600; min-width: 24px;">A.</span>
+                            <input type="text" name="Questions[${questionIndex}].Options[0].OptionText" class="form-control" placeholder="Nhập lựa chọn..." required />
+                            <input type="hidden" name="Questions[${questionIndex}].Options[0].OptionLabel" value="A" />
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeOption(this)">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                        <div class="option-item" style="display: flex; gap: 12px; align-items: center; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" name="Questions[${questionIndex}].Options[1].IsCorrect" value="true" class="correct-checkbox" onchange="updateCheckboxValue(this)" />
+                            <input type="hidden" name="Questions[${questionIndex}].Options[1].IsCorrect" value="false" class="is-correct-hidden" />
+                            <span style="font-weight: 600; min-width: 24px;">B.</span>
+                            <input type="text" name="Questions[${questionIndex}].Options[1].OptionText" class="form-control" placeholder="Nhập lựa chọn..." required />
+                            <input type="hidden" name="Questions[${questionIndex}].Options[1].OptionLabel" value="B" />
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeOption(this)">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', questionHtml);
+        questionIndex++;
+        updateQuestionNumbers();
+    }
+
+    function removeQuestion(button) {
+        customConfirm('Bạn có chắc muốn xóa câu hỏi này?', {
+            title: 'Xóa câu hỏi',
+            type: 'warning'
+        }).then(function(confirmed) {
+            if (confirmed) {
+                button.closest('.question-item').remove();
+                updateQuestionNumbers();
+            }
+        });
+    }
+
+    function addOption(button) {
+        const questionItem = button.closest('.question-item');
+        const questionIndex = questionItem.dataset.questionIndex;
+        const optionsContainer = questionItem.querySelector('.options-container');
+        const optionCount = optionsContainer.querySelectorAll('.option-item').length;
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        const label = labels[optionCount] || (optionCount + 1).toString();
+        
+        const optionHtml = `
+            <div class="option-item" style="display: flex; gap: 12px; align-items: center; padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+                <input type="checkbox" name="Questions[${questionIndex}].Options[${optionCount}].IsCorrect" value="true" class="correct-checkbox" onchange="updateCheckboxValue(this)" />
+                <input type="hidden" name="Questions[${questionIndex}].Options[${optionCount}].IsCorrect" value="false" class="is-correct-hidden" />
+                <span style="font-weight: 600; min-width: 24px;">${label}.</span>
+                <input type="text" name="Questions[${questionIndex}].Options[${optionCount}].OptionText" class="form-control" placeholder="Nhập lựa chọn..." required />
+                <input type="hidden" name="Questions[${questionIndex}].Options[${optionCount}].OptionLabel" value="${label}" />
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeOption(this)">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>
+        `;
+        optionsContainer.insertAdjacentHTML('beforeend', optionHtml);
+    }
+
+    function removeOption(button) {
+        const optionsContainer = button.closest('.options-container');
+        if (optionsContainer.querySelectorAll('.option-item').length <= 2) {
+            customAlert('Mỗi câu hỏi phải có ít nhất 2 lựa chọn', 'warning');
+            return;
+        }
+        button.closest('.option-item').remove();
+        updateOptionLabels(optionsContainer);
+    }
+
+    function updateQuestionNumbers() {
+        const questions = document.querySelectorAll('.question-item');
+        questions.forEach((q, index) => {
+            q.querySelector('h4').textContent = `Câu hỏi ${index + 1}`;
+            q.dataset.questionIndex = index;
+            // Update all input names
+            const questionIndex = index;
+            q.querySelectorAll('input, textarea').forEach(input => {
+                if (input.name) {
+                    input.name = input.name.replace(/Questions\[\d+\]/, `Questions[${questionIndex}]`);
+                }
+            });
+        });
+    }
+
+    function updateOptionLabels(container) {
+        const options = container.querySelectorAll('.option-item');
+        const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        options.forEach((opt, index) => {
+            const labelSpan = opt.querySelector('span');
+            const label = labels[index] || (index + 1).toString();
+            labelSpan.textContent = label + '.';
+            const hiddenInput = opt.querySelector('input[type="hidden"][name*="OptionLabel"]');
+            if (hiddenInput) {
+                hiddenInput.value = label;
+            }
+        });
+    }
+
+    function updateCheckboxValue(checkbox) {
+        const hiddenInput = checkbox.parentElement.querySelector('.is-correct-hidden');
+        if (hiddenInput) {
+            hiddenInput.value = checkbox.checked ? 'true' : 'false';
+        }
+    }
+
+    // Initialize checkbox values on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.correct-checkbox').forEach(function(checkbox) {
+            updateCheckboxValue(checkbox);
+        });
+    });
+
+    // Before form submit, disable checkboxes to only send hidden inputs
+    document.getElementById('quizForm').addEventListener('submit', function(e) {
+        document.querySelectorAll('.correct-checkbox').forEach(function(checkbox) {
+            checkbox.disabled = true;
+        });
+    });
+
+</script>
+
+<style>
+    .required { color: #dc2626; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; margin-bottom: 8px; font-weight: 600; color: #111418; }
+    .form-control { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary { background: #0959aa; color: white; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-outline { background: white; color: #0959aa; border: 1px solid #0959aa; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-sm { padding: 4px 8px; font-size: 12px; }
+    .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge-success { background: #dcfce7; color: #16a34a; }
+    .alert-info { background: #f0f9ff; color: #0284c7; border: 1px solid #7dd3fc; padding: 14px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; margin-bottom: 20px; }
+</style>
+
+@if (ViewBag.HasAttempts == true)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('quizForm');
+            var hasAttempts = @(ViewBag.HasAttempts ? "true" : "false");
+            var submittedCount = @(ViewBag.SubmittedAttemptsCount ?? 0);
+
+            if (form && hasAttempts) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    customConfirm('Bài kiểm tra này đã có ' + submittedCount + ' lượt làm bài đã nộp. Việc chỉnh sửa có thể ảnh hưởng đến kết quả đã chấm và tính công bằng. Bạn có chắc muốn tiếp tục?', {
+                        title: 'Cảnh báo: Bài kiểm tra đã có người làm',
+                        type: 'warning',
+                        confirmType: 'warning'
+                    }).then(function(confirmed) {
+                        if (confirmed) {
+                            form.submit();
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+}
+

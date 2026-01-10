@@ -1,0 +1,126 @@
+@{
+    ViewData["Title"] = "Kết quả bài kiểm tra";
+    Layout = "_DashboardLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var quiz = ViewBag.Quiz as DMS.Models.Quiz;
+    var attempt = ViewBag.Attempt as DMS.Models.StudentQuizAttempt;
+    var answerDetails = ViewBag.AnswerDetails as List<DMS.ViewModels.AnswerDetailVM>;
+}
+
+<div class="dashboard-header">
+    <div class="header-left">
+        <div class="logo-icon">
+            <span class="material-symbols-outlined icon-fill">school</span>
+        </div>
+        <h2 class="header-title">Academic DMS</h2>
+    </div>
+    <div class="header-actions">
+        <partial name="_NotificationDropdown" />
+    </div>
+</div>
+
+<main class="dashboard-main">
+    <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; margin-bottom: 24px;">
+        <h1 style="font-size: 24px; font-weight: 700; color: #111418; margin: 0 0 8px 0;">@quiz?.Title</h1>
+        @if (!string.IsNullOrEmpty(quiz?.Description))
+        {
+            <p style="color: #6b7280; font-size: 15px; margin: 0 0 20px 0;">@quiz.Description</p>
+        }
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Điểm số</div>
+                <div style="font-size: 24px; font-weight: 700; color: #111418;">
+                    @(attempt?.ManualScore ?? attempt?.TotalScore ?? 0) / @(attempt?.MaxScore ?? 0)
+                </div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Phần trăm</div>
+                <div style="font-size: 24px; font-weight: 700; color: @(attempt?.ScorePercentage >= 50 ? "#16a34a" : "#dc2626");">
+                    @(attempt?.ScorePercentage?.ToString("F1") ?? "0")%
+                </div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Thời gian nộp</div>
+                <div style="font-size: 18px; font-weight: 600; color: #111418;">
+                    @(attempt?.SubmittedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        @if (answerDetails != null && answerDetails.Any())
+        {
+            @for (int i = 0; i < answerDetails.Count; i++)
+            {
+                var detail = answerDetails[i];
+                var isCorrect = detail.IsCorrect;
+                
+                <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb;">
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                        <div style="background: @(isCorrect ? "#dcfce7" : "#fee2e2"); color: @(isCorrect ? "#16a34a" : "#dc2626"); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
+                            @(isCorrect ? "✓" : "✗")
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 16px; font-weight: 600; color: #111418; margin: 0 0 8px 0;">@detail.Question.QuestionText</h3>
+                            <div style="font-size: 13px; color: #6b7280;">Điểm: @(detail.ManualPoints ?? detail.PointsEarned ?? 0) / @detail.Question.Points</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-left: 48px;">
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Đáp án của bạn:</div>
+                            <div style="padding: 12px; background: @(isCorrect ? "#dcfce7" : "#fee2e2"); border-radius: 8px; border: 1px solid @(isCorrect ? "#86efac" : "#fca5a5");">
+                                <strong>@(detail.SelectedOption?.OptionLabel ?? "N/A").</strong> @(detail.SelectedOption?.OptionText ?? "Chưa chọn")
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Đáp án đúng:</div>
+                            <div style="padding: 12px; background: #dcfce7; border-radius: 8px; border: 1px solid #86efac;">
+                                <strong>@(detail.CorrectOption?.OptionLabel ?? "N/A").</strong> @(detail.CorrectOption?.OptionText ?? "N/A")
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(detail.TeacherComment))
+                        {
+                            <div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0959aa;">
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Nhận xét của giảng viên:</div>
+                                <div style="color: #111418;">@detail.TeacherComment</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+        <a href="@Url.Action("Index", "StudentQuiz")" class="btn btn-primary" style="text-decoration: none;">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Quay lại danh sách
+        </a>
+    </div>
+</main>
+
+<style>
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-primary {
+        background: #0959aa;
+        color: white;
+    }
+</style>
+

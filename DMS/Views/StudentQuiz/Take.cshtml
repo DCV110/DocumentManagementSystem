@@ -1,0 +1,282 @@
+@model DMS.ViewModels.QuizTakeVM
+@{
+    ViewData["Title"] = "Làm bài kiểm tra";
+    Layout = "_DashboardLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<div class="dashboard-header">
+    <div class="header-left">
+        <div class="logo-icon">
+            <span class="material-symbols-outlined icon-fill">school</span>
+        </div>
+        <h2 class="header-title">Academic DMS</h2>
+    </div>
+    <div class="header-actions">
+        <partial name="_NotificationDropdown" />
+    </div>
+</div>
+
+<main class="dashboard-main">
+    <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: 700; color: #111418; margin: 0 0 8px 0;">@Model.Quiz.Title</h1>
+                @if (!string.IsNullOrEmpty(Model.Quiz.Description))
+                {
+                    <p style="color: #6b7280; font-size: 15px; margin: 0;">@Model.Quiz.Description</p>
+                }
+            </div>
+            @if (Model.Quiz.TimeLimitMinutes > 0)
+            {
+                <div id="timer" style="background: #fef2f2; border: 2px solid #fca5a5; border-radius: 8px; padding: 12px 20px; text-align: center;">
+                    <div style="font-size: 12px; color: #dc2626; margin-bottom: 4px;">Thời gian còn lại</div>
+                    <div id="timeDisplay" style="font-size: 24px; font-weight: 700; color: #dc2626;">--:--</div>
+                </div>
+            }
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(@(Model.Quiz.MaxAttempts > 0 ? 4 : 3), 1fr); gap: 12px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Số câu hỏi</div>
+                <div style="font-size: 18px; font-weight: 600; color: #111418;">@Model.Questions.Count</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Tổng điểm</div>
+                <div style="font-size: 18px; font-weight: 600; color: #111418;">@(Model.Quiz.Questions?.Sum(q => q.Points) ?? 0)</div>
+            </div>
+            <div>
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Đã trả lời</div>
+                <div id="answeredCount" style="font-size: 18px; font-weight: 600; color: #16a34a;">0 / @Model.Questions.Count</div>
+            </div>
+            @if (Model.Quiz.MaxAttempts > 0)
+            {
+                <div>
+                    <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Số lần còn lại</div>
+                    <div style="font-size: 18px; font-weight: 600; color: @(Model.RemainingAttempts > 0 ? "#16a34a" : "#dc2626");">
+                        @(Model.RemainingAttempts > 0 ? Model.RemainingAttempts.ToString() : "0") / @Model.Quiz.MaxAttempts
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <form method="post" action="@Url.Action("Submit", "StudentQuiz", new { attemptId = Model.Attempt.Id })" id="quizForm">
+        @Html.AntiForgeryToken()
+        
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            @for (int i = 0; i < Model.Questions.Count; i++)
+            {
+                var questionVM = Model.Questions[i];
+                var question = questionVM.Question;
+                var selectedOptionId = questionVM.SelectedOptionId;
+                
+                <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb;">
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                        <div style="background: #0959aa; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0;">
+                            @(i + 1)
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 16px; font-weight: 600; color: #111418; margin: 0 0 8px 0;">@question.QuestionText</h3>
+                            <div style="font-size: 13px; color: #6b7280;">Điểm: @question.Points</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-left: 48px;">
+                        @foreach (var option in questionVM.Options)
+                        {
+                            var isSelected = selectedOptionId == option.Id;
+                            <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid @(isSelected ? "#0959aa" : "#e5e7eb"); border-radius: 8px; cursor: pointer; transition: all 0.2s; background: @(isSelected ? "#f0f9ff" : "white");" 
+                                   onmouseover="this.style.borderColor='#0959aa'" 
+                                   onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='#e5e7eb'">
+                                <input type="radio" 
+                                       name="answer_@question.Id" 
+                                       value="@option.Id" 
+                                       @(isSelected ? "checked" : "")
+                                       data-question-id="@question.Id"
+                                       data-option-id="@option.Id"
+                                       style="width: 20px; height: 20px; cursor: pointer;" />
+                                <span style="font-weight: 600; color: #111418; min-width: 24px;">@option.OptionLabel.</span>
+                                <span style="flex: 1; color: #111418;">@option.OptionText</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: flex-end; background: white; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb;">
+            <a href="@Url.Action("Index", "StudentQuiz")" class="btn btn-outline" style="text-decoration: none;">Hủy</a>
+            <button type="submit" class="btn btn-primary" id="submitQuizBtn">
+                <span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">send</span>
+                Nộp bài
+            </button>
+        </div>
+    </form>
+</main>
+
+@{
+    var quizData = new
+    {
+        attemptId = Model.Attempt.Id,
+        totalQuestions = Model.Questions.Count,
+        saveAnswerUrl = Url.Action("SaveAnswer", "StudentQuiz"),
+        timeLimitMinutes = Model.Quiz.TimeLimitMinutes,
+        timeRemaining = Model.TimeRemainingSeconds,
+        hasTimeLimit = Model.Quiz.TimeLimitMinutes > 0
+    };
+}
+
+<script type="text/javascript">
+    (function() {
+        var quizData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(quizData));
+        
+        var attemptId = quizData.attemptId;
+        var totalQuestions = quizData.totalQuestions;
+        var saveAnswerUrl = quizData.saveAnswerUrl;
+        var timeLimitMinutes = quizData.timeLimitMinutes;
+        var timeRemaining = quizData.timeRemaining;
+        var hasTimeLimit = quizData.hasTimeLimit;
+        
+        // Timer
+        if (hasTimeLimit) {
+            if (timeRemaining <= 0) {
+                timeRemaining = timeLimitMinutes * 60;
+            }
+            
+            var timerInterval;
+            
+            function updateTimerDisplay() {
+                var minutes = Math.floor(timeRemaining / 60);
+                var seconds = timeRemaining % 60;
+                var timeDisplay = document.getElementById('timeDisplay');
+                if (timeDisplay) {
+                    timeDisplay.textContent = 
+                        String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                }
+                
+                if (timeRemaining <= 60) {
+                    var timer = document.getElementById('timer');
+                    if (timer) {
+                        timer.style.background = '#fef2f2';
+                        timer.style.borderColor = '#dc2626';
+                    }
+                }
+            }
+            
+            updateTimerDisplay();
+            timerInterval = setInterval(function() {
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    customAlert('Hết thời gian làm bài!', 'warning').then(function() {
+                        document.getElementById('quizForm').submit();
+                    });
+                    return;
+                }
+                updateTimerDisplay();
+                timeRemaining--;
+            }, 1000);
+        }
+
+        // Save answer function
+        function saveAnswer(questionId, optionId) {
+            fetch(saveAnswerUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    attemptId: attemptId,
+                    questionId: questionId,
+                    optionId: optionId
+                })
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.success) {
+                    console.log('Answer saved successfully');
+                } else {
+                    console.error('Error saving answer:', data.message);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error saving answer:', error);
+            });
+        }
+
+        // Update answered count
+        function updateAnsweredCount() {
+            var checked = document.querySelectorAll('input[type="radio"]:checked').length;
+            var answeredCountEl = document.getElementById('answeredCount');
+            if (answeredCountEl) {
+                answeredCountEl.textContent = checked + ' / ' + totalQuestions;
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            updateAnsweredCount();
+            
+            // Add listeners to all radio buttons
+            var radios = document.querySelectorAll('input[type="radio"]');
+            for (var i = 0; i < radios.length; i++) {
+                radios[i].addEventListener('change', function() {
+                    var questionId = parseInt(this.getAttribute('data-question-id'));
+                    var optionId = parseInt(this.value);
+                    
+                    // Save answer
+                    saveAnswer(questionId, optionId);
+                    
+                    // Update answered count
+                    updateAnsweredCount();
+                    
+                    // Update visual feedback
+                    var label = this.closest('label');
+                    if (label) {
+                        label.style.borderColor = '#0959aa';
+                        label.style.background = '#f0f9ff';
+                    }
+                    
+                    // Reset other options in the same question
+                    var questionContainer = label.parentElement;
+                    if (questionContainer) {
+                        var allLabels = questionContainer.querySelectorAll('label');
+                        for (var j = 0; j < allLabels.length; j++) {
+                            if (allLabels[j] !== label) {
+                                var radioInLabel = allLabels[j].querySelector('input[type="radio"]');
+                                if (radioInLabel && !radioInLabel.checked) {
+                                    allLabels[j].style.borderColor = '#e5e7eb';
+                                    allLabels[j].style.background = 'white';
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        // Handle submit button
+        var submitBtn = document.getElementById('submitQuizBtn');
+        var quizForm = document.getElementById('quizForm');
+        
+        if (submitBtn && quizForm) {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                customConfirm('Bạn có chắc muốn nộp bài? Sau khi nộp, bạn không thể chỉnh sửa.', {
+                    title: 'Xác nhận nộp bài',
+                    type: 'warning',
+                    confirmType: 'warning'
+                }).then(function(confirmed) {
+                    if (confirmed) {
+                        quizForm.submit();
+                    }
+                });
+            });
+        }
+    })();
+</script>
+
