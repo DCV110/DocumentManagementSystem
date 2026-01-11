@@ -1,6 +1,7 @@
 @{
     ViewData["Title"] = "Báo cáo thống kê";
     Layout = "_SidebarLayout";
+    var period = ViewBag.Period as string ?? "day";
 }
 
 <partial name="_AdminSidebar" />
@@ -26,6 +27,9 @@
                     <div>
                         <div class="summary-card-label">Tổng người dùng</div>
                         <div class="summary-card-value">@ViewBag.TotalUsers</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                            Hôm nay: +@ViewBag.NewUsersToday | Tuần này: +@ViewBag.NewUsersThisWeek | Tháng này: +@ViewBag.NewUsersThisMonth
+                        </div>
                     </div>
                     <div class="summary-card-icon blue">
                         <span class="material-symbols-outlined">people</span>
@@ -37,6 +41,9 @@
                     <div>
                         <div class="summary-card-label">Tổng tài liệu</div>
                         <div class="summary-card-value">@ViewBag.TotalDocuments</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                            Chờ duyệt: @ViewBag.PendingDocuments | Đã duyệt hôm nay: @ViewBag.ApprovedToday
+                        </div>
                     </div>
                     <div class="summary-card-icon green">
                         <span class="material-symbols-outlined">description</span>
@@ -54,149 +61,616 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Storage Summary -->
-        <div class="summary-card" style="margin-top: 24px;">
-            <div class="summary-card-header">
-                <div>
-                    <div class="summary-card-label">Tổng dung lượng lưu trữ</div>
-                    <div class="summary-card-value">@FormatFileSize(ViewBag.TotalStorage ?? 0)</div>
-                </div>
-                <div class="summary-card-icon" style="background: #f3e8ff; color: #9333ea;">
-                    <span class="material-symbols-outlined">storage</span>
+            <div class="summary-card">
+                <div class="summary-card-header">
+                    <div>
+                        <div class="summary-card-label">Tổng dung lượng</div>
+                        <div class="summary-card-value">@FormatFileSize(ViewBag.TotalStorage ?? 0)</div>
+                    </div>
+                    <div class="summary-card-icon" style="background: #f3e8ff; color: #9333ea;">
+                        <span class="material-symbols-outlined">storage</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Statistics by Course -->
-        <div class="reports-section">
-            <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Thống kê theo môn học</h3>
-            <div class="documents-table-container">
-                <table class="documents-table-modern">
-                    <thead>
-                        <tr>
-                            <th>Môn học</th>
-                            <th>Số tài liệu</th>
-                            <th>Tổng dung lượng</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (ViewBag.DocumentsByCourse != null)
-                        {
-                            var documentsByCourse = ViewBag.DocumentsByCourse as List<DMS.Services.Interfaces.DocumentsByCourseStat>;
-                            @if (documentsByCourse != null && documentsByCourse.Any())
+        <!-- Period Filter -->
+        <div class="reports-section" style="margin-top: 24px;">
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px;">
+                <label style="font-weight: 500; color: #111418;">Xem theo:</label>
+                <div style="display: flex; gap: 8px;">
+                    <a href="@Url.Action("Reports", "Admin", new { period = "day" })" 
+                       class="period-btn @(period == "day" ? "active" : "")">Theo ngày</a>
+                    <a href="@Url.Action("Reports", "Admin", new { period = "week" })" 
+                       class="period-btn @(period == "week" ? "active" : "")">Theo tuần</a>
+                    <a href="@Url.Action("Reports", "Admin", new { period = "month" })" 
+                       class="period-btn @(period == "month" ? "active" : "")">Theo tháng</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="reports-tabs">
+            <button class="tab-btn active" onclick="showTab('phase1')">Báo cáo cốt lõi</button>
+            <button class="tab-btn" onclick="showTab('phase2')">Báo cáo bổ sung</button>
+            <button class="tab-btn" onclick="showTab('phase3')">Báo cáo nâng cao</button>
+        </div>
+
+        <!-- Phase 1: Core Reports -->
+        <div id="phase1" class="tab-content active">
+            <!-- Document Status Report -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Báo cáo tài liệu theo trạng thái</h3>
+                @{
+                    var statusReport = ViewBag.DocumentStatusReport as DMS.Services.Interfaces.DocumentStatusReport;
+                }
+                @if (statusReport != null)
+                {
+                    <div class="status-cards">
+                        <div class="status-card" style="border-left: 4px solid #f59e0b;">
+                            <div class="status-label">Chờ phê duyệt</div>
+                            <div class="status-value">@statusReport.Pending</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #16a34a;">
+                            <div class="status-label">Đã phê duyệt</div>
+                            <div class="status-value">@statusReport.Approved</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #dc2626;">
+                            <div class="status-label">Đã từ chối</div>
+                            <div class="status-value">@statusReport.Rejected</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #6b7280;">
+                            <div class="status-label">Bản nháp</div>
+                            <div class="status-value">@statusReport.Draft</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; display: flex; gap: 24px;">
+                        <div>
+                            <span style="color: #6b7280;">Tỷ lệ phê duyệt: </span>
+                            <span style="font-weight: 600; color: #16a34a;">@statusReport.ApprovalRate.ToString("0.00")%</span>
+                        </div>
+                        <div>
+                            <span style="color: #6b7280;">Tỷ lệ từ chối: </span>
+                            <span style="font-weight: 600; color: #dc2626;">@statusReport.RejectionRate.ToString("0.00")%</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Public Share Report -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Báo cáo tài liệu công khai</h3>
+                @{
+                    var publicShareReport = ViewBag.PublicShareReport as DMS.Services.Interfaces.PublicShareReport;
+                }
+                @if (publicShareReport != null)
+                {
+                    <div class="status-cards">
+                        <div class="status-card" style="border-left: 4px solid #3b82f6;">
+                            <div class="status-label">Yêu cầu chia sẻ</div>
+                            <div class="status-value">@publicShareReport.Requested</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #16a34a;">
+                            <div class="status-label">Đã phê duyệt</div>
+                            <div class="status-value">@publicShareReport.Approved</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #dc2626;">
+                            <div class="status-label">Đã từ chối</div>
+                            <div class="status-value">@publicShareReport.Rejected</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px;">
+                        <span style="color: #6b7280;">Tỷ lệ phê duyệt chia sẻ công khai: </span>
+                        <span style="font-weight: 600; color: #16a34a;">@publicShareReport.ApprovalRate.ToString("0.00")%</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Document Activity by Period -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">
+                    Hoạt động tài liệu @(period == "week" ? "theo tuần" : period == "month" ? "theo tháng" : "theo ngày")
+                </h3>
+                <div class="documents-table-container">
+                    <table class="documents-table-modern">
+                        <thead>
+                            <tr>
+                                <th>@(period == "week" ? "Tuần" : period == "month" ? "Tháng" : "Ngày")</th>
+                                <th>Tải lên</th>
+                                <th>Đã duyệt</th>
+                                <th>Đã từ chối</th>
+                                <th>Lượt xem</th>
+                                <th>Lượt tải</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.DocumentActivityStats != null)
                             {
-                                @foreach (var item in documentsByCourse)
+                                var activityStats = ViewBag.DocumentActivityStats as List<DMS.Services.Interfaces.DocumentActivityStat>;
+                                @if (activityStats != null && activityStats.Any())
+                                {
+                                    @foreach (var stat in activityStats)
+                                    {
+                                        <tr>
+                                            <td style="color: #6b7280;">
+                                                @if (period == "month")
+                                                {
+                                                    @stat.Date.ToString("MM/yyyy")
+                                                }
+                                                else if (period == "week")
+                                                {
+                                                    @($"Tuần {stat.Date:dd/MM/yyyy}")
+                                                }
+                                                else
+                                                {
+                                                    @stat.Date.ToString("dd/MM/yyyy")
+                                                }
+                                            </td>
+                                            <td style="color: #6b7280;">@stat.UploadCount</td>
+                                            <td style="color: #16a34a;">@stat.ApprovedCount</td>
+                                            <td style="color: #dc2626;">@stat.RejectedCount</td>
+                                            <td style="color: #6b7280;">@stat.ViewCount</td>
+                                            <td style="color: #6b7280;">@stat.DownloadCount</td>
+                                        </tr>
+                                    }
+                                }
+                                else
                                 {
                                     <tr>
-                                        <td style="font-weight: 500;">@item.CourseName</td>
-                                        <td style="color: #6b7280;">@item.Count</td>
-                                        <td style="color: #6b7280;">@FormatFileSize(item.TotalSize)</td>
+                                        <td colspan="6" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
                                     </tr>
                                 }
                             }
-                            else
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Statistics by Course -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Thống kê theo môn học</h3>
+                <div class="documents-table-container">
+                    <table class="documents-table-modern">
+                        <thead>
+                            <tr>
+                                <th>Môn học</th>
+                                <th>Số tài liệu</th>
+                                <th>Tổng dung lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.DocumentsByCourse != null)
                             {
-                                <tr>
-                                    <td colspan="3" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
-                                </tr>
+                                var documentsByCourse = ViewBag.DocumentsByCourse as List<DMS.Services.Interfaces.DocumentsByCourseStat>;
+                                @if (documentsByCourse != null && documentsByCourse.Any())
+                                {
+                                    @foreach (var item in documentsByCourse)
+                                    {
+                                        <tr>
+                                            <td style="font-weight: 500;">@item.CourseName</td>
+                                            <td style="color: #6b7280;">@item.Count</td>
+                                            <td style="color: #6b7280;">@FormatFileSize(item.TotalSize)</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="3" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
+                                    </tr>
+                                }
                             }
-                        }
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Top Users Activity -->
-        <div class="reports-section">
-            <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Top người dùng hoạt động</h3>
-            <div class="documents-table-container">
-                <table class="documents-table-modern">
-                    <thead>
-                        <tr>
-                            <th>Người dùng</th>
-                            <th>Số tài liệu</th>
-                            <th>Dung lượng</th>
-                            <th>Lượt xem</th>
-                            <th>Lượt tải</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (ViewBag.UserActivityStats != null)
-                        {
-                            var userStats = ViewBag.UserActivityStats as List<DMS.Services.Interfaces.UserActivityStat>;
-                            @if (userStats != null && userStats.Any())
+        <!-- Phase 2: Additional Reports -->
+        <div id="phase2" class="tab-content">
+            <!-- Document Engagement -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Top tài liệu tương tác nhiều nhất</h3>
+                <div class="documents-table-container">
+                    <table class="documents-table-modern">
+                        <thead>
+                            <tr>
+                                <th>Tài liệu</th>
+                                <th>Môn học</th>
+                                <th>Lượt xem</th>
+                                <th>Lượt tải</th>
+                                <th>Tỷ lệ chuyển đổi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.DocumentEngagementStats != null)
                             {
-                                @foreach (var stat in userStats)
+                                var engagementStats = ViewBag.DocumentEngagementStats as List<DMS.Services.Interfaces.DocumentEngagementStat>;
+                                @if (engagementStats != null && engagementStats.Any())
+                                {
+                                    @foreach (var stat in engagementStats)
+                                    {
+                                        <tr>
+                                            <td style="font-weight: 500;">@stat.DocumentTitle</td>
+                                            <td style="color: #6b7280;">@stat.CourseName</td>
+                                            <td style="color: #6b7280;">@stat.ViewCount</td>
+                                            <td style="color: #6b7280;">@stat.DownloadCount</td>
+                                            <td style="color: #16a34a;">@stat.ConversionRate.ToString("0.00")%</td>
+                                        </tr>
+                                    }
+                                }
+                                else
                                 {
                                     <tr>
-                                        <td>
-                                            <div class="document-item">
-                                                <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@stat.UserName&background=16a34a&color=fff')"></div>
-                                                <div class="document-item-info">
-                                                    <h5>@stat.UserName</h5>
-                                                    <p>@stat.UserEmail</p>
+                                        <td colspan="5" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Users by Faculty -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Thống kê người dùng theo khoa</h3>
+                <div class="documents-table-container">
+                    <table class="documents-table-modern">
+                        <thead>
+                            <tr>
+                                <th>Khoa</th>
+                                <th>Số người dùng</th>
+                                <th>Số tài liệu</th>
+                                <th>Tổng dung lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.UsersByFacultyStats != null)
+                            {
+                                var facultyStats = ViewBag.UsersByFacultyStats as List<DMS.Services.Interfaces.UserByFacultyStat>;
+                                @if (facultyStats != null && facultyStats.Any())
+                                {
+                                    @foreach (var stat in facultyStats)
+                                    {
+                                        <tr>
+                                            <td style="font-weight: 500;">@stat.Faculty</td>
+                                            <td style="color: #6b7280;">@stat.UserCount</td>
+                                            <td style="color: #6b7280;">@stat.DocumentCount</td>
+                                            <td style="color: #6b7280;">@FormatFileSize(stat.TotalStorage)</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Storage Detail Report -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Báo cáo dung lượng chi tiết</h3>
+                @{
+                    var storageReport = ViewBag.StorageDetailReport as DMS.Services.Interfaces.StorageDetailReport;
+                }
+                @if (storageReport != null)
+                {
+                    <!-- By Course -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo môn học</h4>
+                        <div class="documents-table-container">
+                            <table class="documents-table-modern">
+                                <thead>
+                                    <tr>
+                                        <th>Môn học</th>
+                                        <th>Dung lượng</th>
+                                        <th>Tỷ lệ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (storageReport.ByCourse != null && storageReport.ByCourse.Any())
+                                    {
+                                        @foreach (var item in storageReport.ByCourse)
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.CourseName</td>
+                                                <td style="color: #6b7280;">@FormatFileSize(item.Storage)</td>
+                                                <td style="color: #6b7280;">@item.Percentage.ToString("0.00")%</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- By Faculty -->
+                    <div style="margin-bottom: 24px;">
+                        <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo khoa</h4>
+                        <div class="documents-table-container">
+                            <table class="documents-table-modern">
+                                <thead>
+                                    <tr>
+                                        <th>Khoa</th>
+                                        <th>Dung lượng</th>
+                                        <th>Tỷ lệ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (storageReport.ByFaculty != null && storageReport.ByFaculty.Any())
+                                    {
+                                        @foreach (var item in storageReport.ByFaculty)
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.Faculty</td>
+                                                <td style="color: #6b7280;">@FormatFileSize(item.Storage)</td>
+                                                <td style="color: #6b7280;">@item.Percentage.ToString("0.00")%</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- By File Type -->
+                    <div>
+                        <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo loại file</h4>
+                        <div class="documents-table-container">
+                            <table class="documents-table-modern">
+                                <thead>
+                                    <tr>
+                                        <th>Loại file</th>
+                                        <th>Dung lượng</th>
+                                        <th>Tỷ lệ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (storageReport.ByFileType != null && storageReport.ByFileType.Any())
+                                    {
+                                        @foreach (var item in storageReport.ByFileType)
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.FileType</td>
+                                                <td style="color: #6b7280;">@FormatFileSize(item.Storage)</td>
+                                                <td style="color: #6b7280;">@item.Percentage.ToString("0.00")%</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Top Users Activity -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Top người dùng hoạt động</h3>
+                <div class="documents-table-container">
+                    <table class="documents-table-modern">
+                        <thead>
+                            <tr>
+                                <th>Người dùng</th>
+                                <th>Số tài liệu</th>
+                                <th>Dung lượng</th>
+                                <th>Lượt xem</th>
+                                <th>Lượt tải</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ViewBag.UserActivityStats != null)
+                            {
+                                var userStats = ViewBag.UserActivityStats as List<DMS.Services.Interfaces.UserActivityStat>;
+                                @if (userStats != null && userStats.Any())
+                                {
+                                    @foreach (var stat in userStats)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="document-item">
+                                                    <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@stat.UserName&background=16a34a&color=fff')"></div>
+                                                    <div class="document-item-info">
+                                                        <h5>@stat.UserName</h5>
+                                                        <p>@stat.UserEmail</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td style="color: #6b7280;">@stat.DocumentCount</td>
-                                        <td style="color: #6b7280;">@FormatFileSize(stat.TotalStorage)</td>
-                                        <td style="color: #6b7280;">@stat.TotalViews</td>
-                                        <td style="color: #6b7280;">@stat.TotalDownloads</td>
+                                            </td>
+                                            <td style="color: #6b7280;">@stat.DocumentCount</td>
+                                            <td style="color: #6b7280;">@FormatFileSize(stat.TotalStorage)</td>
+                                            <td style="color: #6b7280;">@stat.TotalViews</td>
+                                            <td style="color: #6b7280;">@stat.TotalDownloads</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
                                     </tr>
                                 }
                             }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="5" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Document Activity by Date -->
-        <div class="reports-section">
-            <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Hoạt động tài liệu theo ngày</h3>
-            <div class="documents-table-container">
-                <table class="documents-table-modern">
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Tải lên</th>
-                            <th>Đã duyệt</th>
-                            <th>Đã từ chối</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (ViewBag.DocumentActivityStats != null)
-                        {
-                            var activityStats = ViewBag.DocumentActivityStats as List<DMS.Services.Interfaces.DocumentActivityStat>;
-                            @if (activityStats != null && activityStats.Any())
-                            {
-                                @foreach (var stat in activityStats)
-                                {
-                                    <tr>
-                                        <td style="color: #6b7280;">@stat.Date.ToString("dd/MM/yyyy")</td>
-                                        <td style="color: #6b7280;">@stat.UploadCount</td>
-                                        <td style="color: #16a34a;">@stat.ApprovedCount</td>
-                                        <td style="color: #dc2626;">@stat.RejectedCount</td>
-                                    </tr>
-                                }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="4" style="text-align: center; padding: 24px; color: #6b7280;">Chưa có dữ liệu</td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+        <!-- Phase 3: Advanced Reports -->
+        <div id="phase3" class="tab-content">
+            <!-- Quiz Report -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Báo cáo bài kiểm tra</h3>
+                @{
+                    var quizReport = ViewBag.QuizReport as DMS.Services.Interfaces.QuizReport;
+                }
+                @if (quizReport != null)
+                {
+                    <div class="status-cards">
+                        <div class="status-card" style="border-left: 4px solid #3b82f6;">
+                            <div class="status-label">Tổng số quiz</div>
+                            <div class="status-value">@quizReport.TotalQuizzes</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #16a34a;">
+                            <div class="status-label">Đã publish</div>
+                            <div class="status-value">@quizReport.PublishedQuizzes</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #f59e0b;">
+                            <div class="status-label">Chưa publish</div>
+                            <div class="status-value">@quizReport.UnpublishedQuizzes</div>
+                        </div>
+                        <div class="status-card" style="border-left: 4px solid #9333ea;">
+                            <div class="status-label">Tổng lượt làm</div>
+                            <div class="status-value">@quizReport.TotalAttempts</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 16px; display: flex; gap: 24px;">
+                        <div>
+                            <span style="color: #6b7280;">Điểm trung bình: </span>
+                            <span style="font-weight: 600; color: #16a34a;">@quizReport.AverageScore.ToString("0.00")</span>
+                        </div>
+                        <div>
+                            <span style="color: #6b7280;">Tỷ lệ hoàn thành: </span>
+                            <span style="font-weight: 600; color: #16a34a;">@quizReport.CompletionRate.ToString("0.00")%</span>
+                        </div>
+                    </div>
+
+                    @if (quizReport.ByCourse != null && quizReport.ByCourse.Any())
+                    {
+                        <div style="margin-top: 24px;">
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo môn học</h4>
+                            <div class="documents-table-container">
+                                <table class="documents-table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Môn học</th>
+                                            <th>Số quiz</th>
+                                            <th>Lượt làm</th>
+                                            <th>Điểm trung bình</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in quizReport.ByCourse)
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.CourseName</td>
+                                                <td style="color: #6b7280;">@item.QuizCount</td>
+                                                <td style="color: #6b7280;">@item.AttemptCount</td>
+                                                <td style="color: #16a34a;">@item.AverageScore.ToString("0.00")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Audit Log Report -->
+            <div class="reports-section">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111418; margin-bottom: 16px;">Báo cáo nhật ký hoạt động</h3>
+                @{
+                    var auditLogReport = ViewBag.AuditLogReport as DMS.Services.Interfaces.AuditLogReport;
+                }
+                @if (auditLogReport != null)
+                {
+                    <div style="margin-bottom: 16px;">
+                        <span style="color: #6b7280;">Tổng số hoạt động: </span>
+                        <span style="font-weight: 600; color: #111418;">@auditLogReport.TotalLogs</span>
+                    </div>
+
+                    @if (auditLogReport.ByAction != null && auditLogReport.ByAction.Any())
+                    {
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo hành động</h4>
+                            <div class="documents-table-container">
+                                <table class="documents-table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Hành động</th>
+                                            <th>Số lượng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in auditLogReport.ByAction.OrderByDescending(x => x.Value))
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.Key</td>
+                                                <td style="color: #6b7280;">@item.Value</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    @if (auditLogReport.ByEntityType != null && auditLogReport.ByEntityType.Any())
+                    {
+                        <div style="margin-bottom: 24px;">
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Theo loại thực thể</h4>
+                            <div class="documents-table-container">
+                                <table class="documents-table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Loại thực thể</th>
+                                            <th>Số lượng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in auditLogReport.ByEntityType.OrderByDescending(x => x.Value))
+                                        {
+                                            <tr>
+                                                <td style="font-weight: 500;">@item.Key</td>
+                                                <td style="color: #6b7280;">@item.Value</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    @if (auditLogReport.TopUsers != null && auditLogReport.TopUsers.Any())
+                    {
+                        <div>
+                            <h4 style="font-size: 16px; font-weight: 600; color: #111418; margin-bottom: 12px;">Top người dùng hoạt động</h4>
+                            <div class="documents-table-container">
+                                <table class="documents-table-modern">
+                                    <thead>
+                                        <tr>
+                                            <th>Người dùng</th>
+                                            <th>Số hoạt động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in auditLogReport.TopUsers)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <div class="document-item">
+                                                        <div class="profile-avatar-small" style="background-image: url('https://ui-avatars.com/api/?name=@item.UserName&background=16a34a&color=fff')"></div>
+                                                        <div class="document-item-info">
+                                                            <h5>@item.UserName</h5>
+                                                            <p>@item.UserEmail</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style="color: #6b7280;">@item.ActivityCount</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                }
             </div>
         </div>
     </div>
@@ -205,7 +679,7 @@
 @functions {
     string FormatFileSize(long bytes)
     {
-        string[] sizes = { "Bytes", "KB", "MB", "GB" };
+        string[] sizes = { "Bytes", "KB", "MB", "GB", "TB" };
         double len = bytes;
         int order = 0;
         while (len >= 1024 && order < sizes.Length - 1)
@@ -221,5 +695,115 @@
 .reports-section {
     margin-top: 32px;
 }
+
+.reports-tabs {
+    display: flex;
+    gap: 8px;
+    margin-top: 24px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: #111418;
+    background: #f9fafb;
+}
+
+.tab-btn.active {
+    color: #16a34a;
+    border-bottom-color: #16a34a;
+    background: #f0fdf4;
+}
+
+.tab-content {
+    display: none;
+    margin-top: 24px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.period-btn {
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    background: white;
+}
+
+.period-btn:hover {
+    border-color: #16a34a;
+    color: #16a34a;
+    background: #f0fdf4;
+}
+
+.period-btn.active {
+    border-color: #16a34a;
+    color: #16a34a;
+    background: #f0fdf4;
+}
+
+.status-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.status-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.status-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.status-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111418;
+}
 </style>
 
+<script>
+function showTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to clicked button
+    event.target.classList.add('active');
+}
+</script>

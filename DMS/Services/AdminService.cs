@@ -90,12 +90,338 @@ namespace DMS.Services
                     Date = g.Key,
                     UploadCount = g.Count(),
                     ApprovedCount = g.Count(d => d.Status == DocumentStatus.Approved),
-                    RejectedCount = g.Count(d => d.Status == DocumentStatus.Rejected)
+                    RejectedCount = g.Count(d => d.Status == DocumentStatus.Rejected),
+                    ViewCount = g.Sum(d => d.ViewCount),
+                    DownloadCount = g.Sum(d => d.DownloadCount)
                 })
                 .OrderBy(s => s.Date)
                 .ToListAsync();
 
             return stats;
+        }
+
+        // Phase 1: Core Reports
+        public async Task<DocumentStatusReport> GetDocumentStatusReportAsync()
+        {
+            var allDocs = await _context.Documents.Where(d => !d.IsDeleted).ToListAsync();
+            
+            var pending = allDocs.Count(d => d.Status == DocumentStatus.Pending);
+            var approved = allDocs.Count(d => d.Status == DocumentStatus.Approved);
+            var rejected = allDocs.Count(d => d.Status == DocumentStatus.Rejected);
+            var draft = allDocs.Count(d => d.Status == DocumentStatus.Draft);
+            
+            var totalProcessed = approved + rejected;
+            var approvalRate = totalProcessed > 0 ? (double)approved / totalProcessed * 100 : 0;
+            var rejectionRate = totalProcessed > 0 ? (double)rejected / totalProcessed * 100 : 0;
+
+            return new DocumentStatusReport
+            {
+                Pending = pending,
+                Approved = approved,
+                Rejected = rejected,
+                Draft = draft,
+                ApprovalRate = approvalRate,
+                RejectionRate = rejectionRate
+            };
+        }
+
+        public async Task<List<DocumentActivityStat>> GetDocumentActivityByWeekAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            var startDate = fromDate ?? DateTime.Now.AddDays(-84); // 12 weeks default
+            var endDate = toDate ?? DateTime.Now;
+
+            var stats = await _context.Documents
+                .Where(d => !d.IsDeleted && d.UploadDate >= startDate && d.UploadDate <= endDate)
+                .ToListAsync();
+
+            var weeklyStats = stats
+                .GroupBy(d => GetWeekStart(d.UploadDate))
+                .Select(g => new DocumentActivityStat
+                {
+                    Date = g.Key,
+                    UploadCount = g.Count(),
+                    ApprovedCount = g.Count(d => d.Status == DocumentStatus.Approved),
+                    RejectedCount = g.Count(d => d.Status == DocumentStatus.Rejected),
+                    ViewCount = g.Sum(d => d.ViewCount),
+                    DownloadCount = g.Sum(d => d.DownloadCount)
+                })
+                .OrderBy(s => s.Date)
+                .ToList();
+
+            return weeklyStats;
+        }
+
+        public async Task<List<DocumentActivityStat>> GetDocumentActivityByMonthAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            var startDate = fromDate ?? DateTime.Now.AddMonths(-12); // 12 months default
+            var endDate = toDate ?? DateTime.Now;
+
+            var stats = await _context.Documents
+                .Where(d => !d.IsDeleted && d.UploadDate >= startDate && d.UploadDate <= endDate)
+                .ToListAsync();
+
+            var monthlyStats = stats
+                .GroupBy(d => new DateTime(d.UploadDate.Year, d.UploadDate.Month, 1))
+                .Select(g => new DocumentActivityStat
+                {
+                    Date = g.Key,
+                    UploadCount = g.Count(),
+                    ApprovedCount = g.Count(d => d.Status == DocumentStatus.Approved),
+                    RejectedCount = g.Count(d => d.Status == DocumentStatus.Rejected),
+                    ViewCount = g.Sum(d => d.ViewCount),
+                    DownloadCount = g.Sum(d => d.DownloadCount)
+                })
+                .OrderBy(s => s.Date)
+                .ToList();
+
+            return monthlyStats;
+        }
+
+        public async Task<PublicShareReport> GetPublicShareReportAsync()
+        {
+            var allDocs = await _context.Documents.Where(d => !d.IsDeleted).ToListAsync();
+            
+            var requested = allDocs.Count(d => d.PublicShareRequested);
+            var approved = allDocs.Count(d => d.PublicShareApproved);
+            var rejected = allDocs.Count(d => d.PublicShareRequested && !d.PublicShareApproved && !string.IsNullOrEmpty(d.RejectionReason));
+            
+            var approvalRate = requested > 0 ? (double)approved / requested * 100 : 0;
+
+            return new PublicShareReport
+            {
+                Requested = requested,
+                Approved = approved,
+                Rejected = rejected,
+                ApprovalRate = approvalRate
+            };
+        }
+
+        // Phase 2: Additional Reports
+        public async Task<List<DocumentEngagementStat>> GetDocumentEngagementStatsAsync(int top = 10)
+        {
+            var stats = await _context.Documents
+                .Include(d => d.Course)
+                .Where(d => !d.IsDeleted)
+                .Select(d => new DocumentEngagementStat
+                {
+                    DocumentId = d.Id,
+                    DocumentTitle = d.Title,
+                    CourseName = d.Course != null ? d.Course.CourseName : "Không có",
+                    ViewCount = d.ViewCount,
+                    DownloadCount = d.DownloadCount,
+                    ConversionRate = d.ViewCount > 0 ? (double)d.DownloadCount / d.ViewCount * 100 : 0
+                })
+                .OrderByDescending(s => s.ViewCount)
+                .ThenByDescending(s => s.DownloadCount)
+                .Take(top)
+                .ToListAsync();
+
+            return stats;
+        }
+
+        public async Task<List<UserByFacultyStat>> GetUsersByFacultyStatsAsync()
+        {
+            var users = await _userManager.Users
+                .Include(u => u.Documents)
+                .ToListAsync();
+
+            var stats = users
+                .GroupBy(u => u.Faculty ?? "Không xác định")
+                .Select(g => new UserByFacultyStat
+                {
+                    Faculty = g.Key,
+                    UserCount = g.Count(),
+                    DocumentCount = g.Sum(u => u.Documents.Count(d => !d.IsDeleted)),
+                    TotalStorage = g.Sum(u => u.Documents.Where(d => !d.IsDeleted).Sum(d => d.FileSize))
+                })
+                .OrderByDescending(s => s.UserCount)
+                .ToList();
+
+            return stats;
+        }
+
+        public async Task<StorageDetailReport> GetStorageDetailReportAsync()
+        {
+            var allDocs = await _context.Documents
+                .Include(d => d.Course)
+                .Include(d => d.User)
+                .Where(d => !d.IsDeleted)
+                .ToListAsync();
+
+            var totalStorage = allDocs.Sum(d => d.FileSize);
+
+            // By Course
+            var byCourse = allDocs
+                .Where(d => d.Course != null)
+                .GroupBy(d => d.Course!.CourseName)
+                .Select(g => new StorageByCourse
+                {
+                    CourseName = g.Key,
+                    Storage = g.Sum(d => d.FileSize),
+                    Percentage = totalStorage > 0 ? (double)g.Sum(d => d.FileSize) / totalStorage * 100 : 0
+                })
+                .OrderByDescending(s => s.Storage)
+                .Take(10)
+                .ToList();
+
+            // By Faculty
+            var byFaculty = allDocs
+                .Where(d => d.User != null && !string.IsNullOrEmpty(d.User.Faculty))
+                .GroupBy(d => d.User!.Faculty!)
+                .Select(g => new StorageByFaculty
+                {
+                    Faculty = g.Key,
+                    Storage = g.Sum(d => d.FileSize),
+                    Percentage = totalStorage > 0 ? (double)g.Sum(d => d.FileSize) / totalStorage * 100 : 0
+                })
+                .OrderByDescending(s => s.Storage)
+                .ToList();
+
+            // By File Type
+            var byFileType = allDocs
+                .GroupBy(d => d.ContentType)
+                .Select(g => new StorageByFileType
+                {
+                    FileType = g.Key,
+                    Storage = g.Sum(d => d.FileSize),
+                    Percentage = totalStorage > 0 ? (double)g.Sum(d => d.FileSize) / totalStorage * 100 : 0
+                })
+                .OrderByDescending(s => s.Storage)
+                .Take(10)
+                .ToList();
+
+            return new StorageDetailReport
+            {
+                TotalStorage = totalStorage,
+                ByCourse = byCourse,
+                ByFaculty = byFaculty,
+                ByFileType = byFileType
+            };
+        }
+
+        // Phase 3: Advanced Reports
+        public async Task<QuizReport> GetQuizReportAsync()
+        {
+            var allQuizzes = await _context.Quizzes
+                .Include(q => q.Course)
+                .Include(q => q.Attempts)
+                .Where(q => !q.IsDeleted)
+                .ToListAsync();
+
+            var totalQuizzes = allQuizzes.Count;
+            var publishedQuizzes = allQuizzes.Count(q => q.IsPublished);
+            var unpublishedQuizzes = totalQuizzes - publishedQuizzes;
+            var totalAttempts = allQuizzes.Sum(q => q.Attempts.Count);
+            
+            var completedAttempts = allQuizzes
+                .SelectMany(q => q.Attempts)
+                .Where(a => a.SubmittedAt.HasValue)
+                .ToList();
+            
+            var averageScore = completedAttempts.Any() 
+                ? completedAttempts.Where(a => a.ScorePercentage.HasValue).Average(a => a.ScorePercentage!.Value) 
+                : 0;
+            
+            var completionRate = totalAttempts > 0 
+                ? (double)completedAttempts.Count / totalAttempts * 100 
+                : 0;
+
+            // By Course
+            var byCourse = allQuizzes
+                .Where(q => q.Course != null)
+                .GroupBy(q => q.Course!.CourseName)
+                .Select(g => new QuizByCourse
+                {
+                    CourseName = g.Key,
+                    QuizCount = g.Count(),
+                    AttemptCount = g.Sum(q => q.Attempts.Count),
+                    AverageScore = g.SelectMany(q => q.Attempts)
+                        .Where(a => a.ScorePercentage.HasValue)
+                        .Any() 
+                        ? g.SelectMany(q => q.Attempts)
+                            .Where(a => a.ScorePercentage.HasValue)
+                            .Average(a => a.ScorePercentage!.Value)
+                        : 0
+                })
+                .OrderByDescending(s => s.QuizCount)
+                .ToList();
+
+            return new QuizReport
+            {
+                TotalQuizzes = totalQuizzes,
+                PublishedQuizzes = publishedQuizzes,
+                UnpublishedQuizzes = unpublishedQuizzes,
+                TotalAttempts = totalAttempts,
+                AverageScore = averageScore,
+                CompletionRate = completionRate,
+                ByCourse = byCourse
+            };
+        }
+
+        public async Task<AuditLogReport> GetAuditLogReportAsync(DateTime? fromDate, DateTime? toDate)
+        {
+            var startDate = fromDate ?? DateTime.Now.AddDays(-30);
+            var endDate = toDate ?? DateTime.Now;
+
+            var logs = await _context.AuditLogs
+                .Where(a => a.Timestamp >= startDate && a.Timestamp <= endDate)
+                .ToListAsync();
+
+            var totalLogs = logs.Count;
+
+            // By Action
+            var byAction = logs
+                .GroupBy(l => l.Action)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            // By Entity Type
+            var byEntityType = logs
+                .Where(l => !string.IsNullOrEmpty(l.EntityType))
+                .GroupBy(l => l.EntityType!)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            // Top Users
+            var topUsers = logs
+                .GroupBy(l => l.UserId)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToList();
+
+            var userIds = topUsers.Select(u => u.UserId).ToList();
+            var users = await _userManager.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+
+            var userDict = users.ToDictionary(u => u.Id);
+
+            var topUserActivities = topUsers
+                .Select(u => new TopUserActivity
+                {
+                    UserName = userDict.ContainsKey(u.UserId) ? userDict[u.UserId].FullName : "Unknown",
+                    UserEmail = userDict.ContainsKey(u.UserId) ? userDict[u.UserId].Email ?? "" : "",
+                    ActivityCount = u.Count
+                })
+                .ToList();
+
+            return new AuditLogReport
+            {
+                TotalLogs = totalLogs,
+                ByAction = byAction,
+                ByEntityType = byEntityType,
+                TopUsers = topUserActivities
+            };
+        }
+
+        // Helper method
+        private DateTime GetWeekStart(DateTime date)
+        {
+            var diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+            return date.AddDays(-1 * diff).Date;
         }
 
         // Audit Log - Log Activity

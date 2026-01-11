@@ -260,18 +260,58 @@ namespace DMS.Controllers
         }
 
         // Reports
-        public async Task<IActionResult> Reports(DateTime? fromDate, DateTime? toDate)
+        public async Task<IActionResult> Reports(DateTime? fromDate, DateTime? toDate, string period = "day")
         {
             var statistics = await _adminService.GetStatisticsAsync(fromDate, toDate);
             var documentsByCourse = await _adminService.GetDocumentsByCourseAsync();
             var userActivityStats = await _adminService.GetUserActivityStatsAsync(10);
-            var documentActivityStats = await _adminService.GetDocumentActivityStatsAsync(fromDate, toDate);
+            
+            // Get activity stats based on period
+            List<DocumentActivityStat> documentActivityStats;
+            if (period == "week")
+            {
+                documentActivityStats = await _adminService.GetDocumentActivityByWeekAsync(fromDate, toDate);
+            }
+            else if (period == "month")
+            {
+                documentActivityStats = await _adminService.GetDocumentActivityByMonthAsync(fromDate, toDate);
+            }
+            else
+            {
+                documentActivityStats = await _adminService.GetDocumentActivityStatsAsync(fromDate, toDate);
+            }
 
             // Calculate total storage
             var totalStorage = await _context.Documents
                 .Where(d => !d.IsDeleted)
                 .SumAsync(d => (long?)d.FileSize) ?? 0;
 
+            // Phase 1: Core Reports
+            var documentStatusReport = await _adminService.GetDocumentStatusReportAsync();
+            var publicShareReport = await _adminService.GetPublicShareReportAsync();
+
+            // Phase 2: Additional Reports
+            var documentEngagementStats = await _adminService.GetDocumentEngagementStatsAsync(10);
+            var usersByFacultyStats = await _adminService.GetUsersByFacultyStatsAsync();
+            var storageDetailReport = await _adminService.GetStorageDetailReportAsync();
+
+            // Phase 3: Advanced Reports
+            var quizReport = await _adminService.GetQuizReportAsync();
+            var auditLogReport = await _adminService.GetAuditLogReportAsync(fromDate, toDate);
+
+            // Additional statistics
+            var today = DateTime.Today;
+            var pendingDocuments = await _context.Documents.CountAsync(d => !d.IsDeleted && d.Status == DocumentStatus.Pending);
+            var approvedToday = await _context.Documents.CountAsync(d => 
+                !d.IsDeleted && 
+                d.Status == DocumentStatus.Approved && 
+                d.ApprovedDate.HasValue && 
+                d.ApprovedDate.Value.Date == today);
+            var newUsersToday = await _userManager.Users.CountAsync(u => u.CreatedDate.Date == today);
+            var newUsersThisWeek = await _userManager.Users.CountAsync(u => u.CreatedDate >= today.AddDays(-(int)today.DayOfWeek));
+            var newUsersThisMonth = await _userManager.Users.CountAsync(u => u.CreatedDate >= new DateTime(today.Year, today.Month, 1));
+
+            // ViewBag assignments
             ViewBag.TotalUsers = statistics.TotalUsers;
             ViewBag.TotalDocuments = statistics.TotalDocuments;
             ViewBag.TotalCourses = statistics.TotalCourses;
@@ -281,6 +321,25 @@ namespace DMS.Controllers
             ViewBag.TotalStorage = totalStorage;
             ViewBag.FromDate = fromDate;
             ViewBag.ToDate = toDate;
+            ViewBag.Period = period;
+
+            // Phase 1
+            ViewBag.DocumentStatusReport = documentStatusReport;
+            ViewBag.PublicShareReport = publicShareReport;
+            ViewBag.PendingDocuments = pendingDocuments;
+            ViewBag.ApprovedToday = approvedToday;
+            ViewBag.NewUsersToday = newUsersToday;
+            ViewBag.NewUsersThisWeek = newUsersThisWeek;
+            ViewBag.NewUsersThisMonth = newUsersThisMonth;
+
+            // Phase 2
+            ViewBag.DocumentEngagementStats = documentEngagementStats;
+            ViewBag.UsersByFacultyStats = usersByFacultyStats;
+            ViewBag.StorageDetailReport = storageDetailReport;
+
+            // Phase 3
+            ViewBag.QuizReport = quizReport;
+            ViewBag.AuditLogReport = auditLogReport;
 
             return View();
         }
