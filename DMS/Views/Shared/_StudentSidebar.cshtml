@@ -1,19 +1,32 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+
 @{
-    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
-    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    ApplicationUser? user = null;
+    if (SignInManager.IsSignedIn(User))
+    {
+        user = await UserManager.GetUserAsync(User);
+    }
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 }
 
 <div class="sidebar">
-    <div class="sidebar-header">
-        <div class="sidebar-logo">
-            <span class="material-symbols-outlined">school</span>
-            <span>Academic DMS</span>
+    <!-- Profile Section -->
+    <div class="sidebar-profile">
+        <div class="profile-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@(user?.FullName ?? "Sinh viên")&background=16a34a&color=fff')"></div>
+        <div class="profile-info">
+            <h4>@(user?.FullName ?? "Sinh viên")</h4>
+            <p>@(user?.Faculty ?? "Khoa CNTT")</p>
         </div>
     </div>
+
+    <!-- Navigation -->
     <nav class="sidebar-nav">
         <a href="@Url.Action("StudentDashboard", "Home")" class="nav-item @(currentAction == "StudentDashboard" && currentController == "Home" ? "active" : "")">
             <span class="material-symbols-outlined">dashboard</span>
-            <span>Tổng quan</span>
+            <span>Dashboard</span>
         </a>
         <a href="@Url.Action("Library", "Document")" class="nav-item @(currentAction == "Library" && currentController == "Document" ? "active" : "")">
             <span class="material-symbols-outlined">library_books</span>
@@ -31,7 +44,26 @@
             <span class="material-symbols-outlined">quiz</span>
             <span>Bài kiểm tra</span>
         </a>
+        <a href="@Url.Action("History", "Home")" class="nav-item @(currentAction == "History" && currentController == "Home" ? "active" : "")">
+            <span class="material-symbols-outlined">history</span>
+            <span>Lịch sử</span>
+        </a>
     </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <button class="theme-toggle">
+            <span class="material-symbols-outlined">visibility</span>
+            <span>Toggle Theme</span>
+        </button>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="logout-btn">
+                <span class="material-symbols-outlined">logout</span>
+                <span>Đăng xuất</span>
+            </button>
+        </form>
+    </div>
 </div>
 
 

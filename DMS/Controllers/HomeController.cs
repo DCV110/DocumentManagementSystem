@@ -18,6 +18,7 @@ namespace DMS.Controllers
         private readonly IFolderService _folderService;
         private readonly IWebHostEnvironment _environment;
         private readonly IAdminService _adminService;
+        private readonly IQuizService _quizService;
 
         public HomeController(
             UserManager<ApplicationUser> userManager, 
@@ -26,7 +27,8 @@ namespace DMS.Controllers
             ICourseService courseService,
             IFolderService folderService,
             IWebHostEnvironment environment,
-            IAdminService adminService)
+            IAdminService adminService,
+            IQuizService quizService)
         {
             _userManager = userManager;
             _context = context;
@@ -35,6 +37,7 @@ namespace DMS.Controllers
             _folderService = folderService;
             _environment = environment;
             _adminService = adminService;
+            _quizService = quizService;
         }
 
         [Authorize]
@@ -999,6 +1002,57 @@ namespace DMS.Controllers
             ViewBag.Search = search;
             ViewBag.SortBy = sortBy;
             ViewBag.Courses = await _courseService.GetAllCoursesAsync();
+
+            return View();
+        }
+
+        // History - Student (Lịch sử xem file, làm bài, và file yêu thích)
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> History()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
+            // Lịch sử xem file (từ AuditLog)
+            var viewHistoryLogs = await _context.AuditLogs
+                .Where(a => a.UserId == user.Id && 
+                           a.Action == "View" && 
+                           a.EntityType == "Document" &&
+                           a.EntityId != null)
+                .OrderByDescending(a => a.Timestamp)
+                .Take(50)
+                .ToListAsync();
+
+            // Lấy thông tin document cho mỗi log entry
+            var viewHistoryWithDocs = new List<(AuditLog Log, Document? Document)>();
+            foreach (var log in viewHistoryLogs)
+            {
+                var doc = await _documentService.GetDocumentWithDetailsAsync(log.EntityId ?? 0);
+                if (doc != null && !doc.IsDeleted)
+                {
+                    viewHistoryWithDocs.Add((log, doc));
+                }
+            }
+
+            // Lịch sử làm bài (Quiz Attempts)
+            var quizAttempts = await _quizService.GetAttemptsByStudentAsync(user.Id);
+
+            // File đã yêu thích
+            var favoriteDocuments = await _context.FavoriteDocuments
+                .Where(f => f.UserId == user.Id)
+                .Include(f => f.Document)
+                    .ThenInclude(d => d.User)
+                .Include(f => f.Document)
+                    .ThenInclude(d => d.Course)
+                .OrderByDescending(f => f.CreatedDate)
+                .Select(f => f.Document)
+                .Where(d => d != null && !d.IsDeleted)
+                .ToListAsync();
+
+            ViewBag.User = user;
+            ViewBag.ViewHistory = viewHistoryWithDocs;
+            ViewBag.QuizAttempts = quizAttempts;
+            ViewBag.FavoriteDocuments = favoriteDocuments;
 
             return View();
         }

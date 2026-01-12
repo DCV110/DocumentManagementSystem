@@ -57,32 +57,87 @@ namespace DMS.Controllers
         // Create User
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateUser(string email, string password, string fullName, string role, string? studentCode, string? faculty, string? classCode)
+        public async Task<IActionResult> CreateUser(string email, string password, string confirmPassword, string fullName, string role, string? studentCode, string? faculty, string? classCode)
         {
-            var user = await _userManager.GetUserAsync(User);
+            // Validate input
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                TempData["ErrorMessage"] = "Email không được để trống";
+                return RedirectToAction("UserManagement");
+            }
+
+            // Validate email domain - must end with @dms.com
+            if (!email.EndsWith("@dms.com", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Email phải có đuôi @dms.com (ví dụ: user@dms.com)";
+                return RedirectToAction("UserManagement");
+            }
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                TempData["ErrorMessage"] = "Mật khẩu không được để trống";
+                return RedirectToAction("UserManagement");
+            }
+
+            if (password != confirmPassword)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu xác nhận không khớp";
+                return RedirectToAction("UserManagement");
+            }
+
+            if (password.Length < 6)
+            {
+                TempData["ErrorMessage"] = "Mật khẩu phải có ít nhất 6 ký tự";
+                return RedirectToAction("UserManagement");
+            }
+
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                TempData["ErrorMessage"] = "Họ tên không được để trống";
+                return RedirectToAction("UserManagement");
+            }
+
+            if (string.IsNullOrWhiteSpace(role))
+            {
+                TempData["ErrorMessage"] = "Vui lòng chọn vai trò";
+                return RedirectToAction("UserManagement");
+            }
+
+            // Check if email already exists
+            var existingUser = await _userManager.FindByEmailAsync(email);
+            if (existingUser != null)
+            {
+                TempData["ErrorMessage"] = $"Email '{email}' đã được sử dụng";
+                return RedirectToAction("UserManagement");
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
             var result = await _userService.CreateUserAsync(email, password, fullName, role, studentCode, faculty, classCode);
+            
             if (!result.Succeeded)
             {
-                TempData["ErrorMessage"] = string.Join(", ", result.Errors.Select(e => e.Description));
+                var errorMessages = result.Errors.Select(e => e.Description).ToList();
+                TempData["ErrorMessage"] = string.Join(", ", errorMessages);
             }
             else
             {
                 // Log activity
-                if (user != null)
+                if (currentUser != null)
                 {
                     await _adminService.LogActivityAsync(
                         "Create", 
                         "User", 
                         null, 
                         $"Đã tạo người dùng mới: {fullName} ({email}) - Vai trò: {role}",
-                        user.Id,
+                        currentUser.Id,
                         HttpContext.Connection.RemoteIpAddress?.ToString(),
                         Request.Headers["User-Agent"].ToString()
                     );
                 }
                 
-                TempData["SuccessMessage"] = "Tạo người dùng thành công!";
+                TempData["SuccessMessage"] = $"Đã tạo người dùng '{fullName}' ({email}) thành công!";
             }
+            
             return RedirectToAction("UserManagement");
         }
 

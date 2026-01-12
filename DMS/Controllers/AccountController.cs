@@ -109,52 +109,6 @@ namespace DMS.Controllers
             await _signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }
-
-        [HttpGet]
-        public IActionResult Register()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(string email, string password, string confirmPassword, string fullName)
-        {
-            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
-            {
-                ModelState.AddModelError("", "Vui lòng điền đầy đủ thông tin.");
-                return View();
-            }
-
-            if (password != confirmPassword)
-            {
-                ModelState.AddModelError("", "Mật khẩu xác nhận không khớp.");
-                return View();
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = email,
-                Email = email,
-                FullName = fullName,
-                CreatedDate = DateTime.Now
-            };
-
-            var result = await _userManager.CreateAsync(user, password);
-            
-            if (result.Succeeded)
-            {
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Home");
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError("", error.Description);
-            }
-
-            return View();
-        }
     }
 }
 

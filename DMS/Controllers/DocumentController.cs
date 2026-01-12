@@ -1096,5 +1096,239 @@ namespace DMS.Controllers
 
             return RedirectToAction("Approval", "Document", new { filter = "approved" });
         }
+
+        // POST: Toggle Favorite Document
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFavorite([FromBody] ToggleFavoriteRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng chưa đăng nhập" });
+            }
+
+            var document = await _documentService.GetDocumentByIdAsync(request.DocumentId);
+            if (document == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài liệu" });
+            }
+
+            var existingFavorite = await _context.FavoriteDocuments
+                .FirstOrDefaultAsync(f => f.UserId == user.Id && f.DocumentId == request.DocumentId);
+
+            if (existingFavorite != null)
+            {
+                // Remove favorite
+                _context.FavoriteDocuments.Remove(existingFavorite);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, isFavorite = false, message = "Đã bỏ yêu thích" });
+            }
+            else
+            {
+                // Add favorite
+                var favorite = new FavoriteDocument
+                {
+                    UserId = user.Id,
+                    DocumentId = request.DocumentId,
+                    CreatedDate = DateTime.Now
+                };
+                _context.FavoriteDocuments.Add(favorite);
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, isFavorite = true, message = "Đã thêm vào yêu thích" });
+            }
+        }
+
+        // GET: Check if document is favorited
+        [HttpGet]
+        public async Task<IActionResult> IsFavorite(int documentId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { isFavorite = false });
+            }
+
+            var isFavorite = await _context.FavoriteDocuments
+                .AnyAsync(f => f.UserId == user.Id && f.DocumentId == documentId);
+
+            return Json(new { isFavorite });
+        }
+
+        // GET: Get comments for a document
+        [HttpGet]
+        public async Task<IActionResult> GetComments(int documentId)
+        {
+            var comments = await _documentService.GetDocumentCommentsAsync(documentId);
+            return Json(new { success = true, comments = comments.Select(c => new
+            {
+                id = c.Id,
+                content = c.Content,
+                userName = c.User?.FullName ?? "Unknown",
+                userId = c.UserId,
+                createdDate = c.CreatedDate.ToString("dd/MM/yyyy HH:mm"),
+                canEdit = c.UserId == _userManager.GetUserId(User),
+                canDelete = c.UserId == _userManager.GetUserId(User)
+            })});
+        }
+
+        // POST: Add comment
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddComment([FromBody] AddCommentRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng chưa đăng nhập" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return Json(new { success = false, message = "Nội dung bình luận không được để trống" });
+            }
+
+            var document = await _documentService.GetDocumentByIdAsync(request.DocumentId);
+            if (document == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài liệu" });
+            }
+
+            var comment = await _documentService.AddCommentAsync(request.DocumentId, user.Id, request.Content);
+            return Json(new { success = true, comment = new
+            {
+                id = comment.Id,
+                content = comment.Content,
+                userName = comment.User?.FullName ?? "Unknown",
+                userId = comment.UserId,
+                createdDate = comment.CreatedDate.ToString("dd/MM/yyyy HH:mm"),
+                canEdit = true,
+                canDelete = true
+            }});
+        }
+
+        // POST: Update comment
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateComment([FromBody] UpdateCommentRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng chưa đăng nhập" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return Json(new { success = false, message = "Nội dung bình luận không được để trống" });
+            }
+
+            var success = await _documentService.UpdateCommentAsync(request.CommentId, user.Id, request.Content);
+            if (!success)
+            {
+                return Json(new { success = false, message = "Không thể cập nhật bình luận" });
+            }
+
+            return Json(new { success = true, message = "Đã cập nhật bình luận" });
+        }
+
+        // POST: Delete comment
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteComment([FromBody] DeleteCommentRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng chưa đăng nhập" });
+            }
+
+            var success = await _documentService.DeleteCommentAsync(request.CommentId, user.Id);
+            if (!success)
+            {
+                return Json(new { success = false, message = "Không thể xóa bình luận" });
+            }
+
+            return Json(new { success = true, message = "Đã xóa bình luận" });
+        }
+
+        // GET: Get user rating for a document
+        [HttpGet]
+        public async Task<IActionResult> GetUserRating(int documentId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { rating = 0 });
+            }
+
+            var rating = await _documentService.GetUserRatingAsync(documentId, user.Id);
+            return Json(new { rating = rating?.Rating ?? 0 });
+        }
+
+        // GET: Get rating stats for a document
+        [HttpGet]
+        public async Task<IActionResult> GetRatingStats(int documentId)
+        {
+            var (averageRating, totalRatings) = await _documentService.GetDocumentRatingStatsAsync(documentId);
+            return Json(new { averageRating, totalRatings });
+        }
+
+        // POST: Add or update rating
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddOrUpdateRating([FromBody] AddRatingRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Người dùng chưa đăng nhập" });
+            }
+
+            if (request.Rating < 1 || request.Rating > 5)
+            {
+                return Json(new { success = false, message = "Đánh giá phải từ 1 đến 5 sao" });
+            }
+
+            var document = await _documentService.GetDocumentByIdAsync(request.DocumentId);
+            if (document == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài liệu" });
+            }
+
+            await _documentService.AddOrUpdateRatingAsync(request.DocumentId, user.Id, request.Rating);
+            var (averageRating, totalRatings) = await _documentService.GetDocumentRatingStatsAsync(request.DocumentId);
+            
+            return Json(new { success = true, message = "Đã cập nhật đánh giá", averageRating, totalRatings });
+        }
+    }
+
+    // Request models
+    public class ToggleFavoriteRequest
+    {
+        public int DocumentId { get; set; }
+    }
+
+    public class AddCommentRequest
+    {
+        public int DocumentId { get; set; }
+        public string Content { get; set; } = null!;
+    }
+
+    public class UpdateCommentRequest
+    {
+        public int CommentId { get; set; }
+        public string Content { get; set; } = null!;
+    }
+
+    public class DeleteCommentRequest
+    {
+        public int CommentId { get; set; }
+    }
+
+    public class AddRatingRequest
+    {
+        public int DocumentId { get; set; }
+        public int Rating { get; set; }
     }
 }

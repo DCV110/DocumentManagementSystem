@@ -29,6 +29,22 @@
 
     <!-- Content Body -->
     <div class="content-body">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" style="margin-bottom: 16px;">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>@TempData["SuccessMessage"]</span>
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error" style="margin-bottom: 16px;">
+                <span class="material-symbols-outlined">error</span>
+                <span>@TempData["ErrorMessage"]</span>
+            </div>
+        }
+
         <!-- Search and Filters -->
         <div class="search-filter-section">
             <form method="get" action="@Url.Action("UserManagement", "Admin")" style="flex: 1;">
@@ -159,24 +175,41 @@
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <form method="post" action="@Url.Action("CreateUser", "Admin")" id="createUserForm">
+        <form method="post" action="@Url.Action("CreateUser", "Admin")" id="createUserForm" onsubmit="return validateCreateUserForm()">
             @Html.AntiForgeryToken()
             <div class="modal-body">
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-error" style="margin-bottom: 16px;">
+                        <span class="material-symbols-outlined">error</span>
+                        <span>@TempData["ErrorMessage"]</span>
+                    </div>
+                }
+                <div id="createUserErrorAlert" class="alert alert-error" style="display: none; margin-bottom: 16px;">
+                    <span class="material-symbols-outlined">error</span>
+                    <span id="createUserErrorText"></span>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Email <span class="required">*</span></label>
-                    <input type="email" name="email" class="form-input" required />
+                    <input type="email" name="email" id="createUserEmail" class="form-input" required placeholder="user@@dms.com" />
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Email phải có đuôi @@dms.com (ví dụ: user@@dms.com)</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Mật khẩu <span class="required">*</span></label>
-                    <input type="password" name="password" class="form-input" required />
+                    <input type="password" name="password" id="createUserPassword" class="form-input" required minlength="6" />
+                    <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">Tối thiểu 6 ký tự</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Xác nhận mật khẩu <span class="required">*</span></label>
+                    <input type="password" name="confirmPassword" id="createUserConfirmPassword" class="form-input" required minlength="6" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Họ tên <span class="required">*</span></label>
-                    <input type="text" name="fullName" class="form-input" required />
+                    <input type="text" name="fullName" id="createUserFullName" class="form-input" required />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Vai trò <span class="required">*</span></label>
-                    <select name="role" class="form-select" required>
+                    <select name="role" id="createUserRole" class="form-select" required onchange="handleRoleChange(this.value)">
                         <option value="">-- Chọn vai trò --</option>
                         @if (ViewBag.Roles != null)
                         {
@@ -196,11 +229,11 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Mã sinh viên</label>
-                    <input type="text" name="studentCode" class="form-input" id="studentCodeInput" />
+                    <input type="text" name="studentCode" class="form-input" id="studentCodeInput" placeholder="Chỉ dành cho sinh viên" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Khoa</label>
-                    <input type="text" name="faculty" class="form-input" />
+                    <input type="text" name="faculty" class="form-input" placeholder="Ví dụ: Khoa CNTT" />
                 </div>
                 <div class="form-group" id="classCodeGroup" style="display: none;">
                     <label class="form-label">Mã lớp</label>
@@ -297,13 +330,104 @@
 <script>
 function showCreateUserModal() {
     document.getElementById('createUserModal').style.display = 'flex';
+    // Clear any previous errors
+    document.getElementById('createUserErrorAlert').style.display = 'none';
+    document.getElementById('createUserForm').reset();
+    document.getElementById('classCodeGroup').style.display = 'none';
 }
 
 function closeCreateUserModal() {
     document.getElementById('createUserModal').style.display = 'none';
     document.getElementById('createUserForm').reset();
+    document.getElementById('createUserErrorAlert').style.display = 'none';
     // Hide class code field
     document.getElementById('classCodeGroup').style.display = 'none';
+}
+
+function handleRoleChange(role) {
+    const classCodeGroup = document.getElementById('classCodeGroup');
+    const studentCodeInput = document.getElementById('studentCodeInput');
+    
+    if (role === 'Student') {
+        classCodeGroup.style.display = 'block';
+        studentCodeInput.placeholder = 'Nhập mã sinh viên';
+    } else {
+        classCodeGroup.style.display = 'none';
+        document.getElementById('classCodeInput').value = '';
+        if (role !== 'Student') {
+            studentCodeInput.placeholder = 'Chỉ dành cho sinh viên';
+        }
+    }
+}
+
+function validateCreateUserForm() {
+    const email = document.getElementById('createUserEmail').value.trim();
+    const password = document.getElementById('createUserPassword').value;
+    const confirmPassword = document.getElementById('createUserConfirmPassword').value;
+    const fullName = document.getElementById('createUserFullName').value.trim();
+    const role = document.getElementById('createUserRole').value;
+    const errorAlert = document.getElementById('createUserErrorAlert');
+    const errorText = document.getElementById('createUserErrorText');
+    
+    // Clear previous errors
+    errorAlert.style.display = 'none';
+    
+    // Validate email
+    if (!email) {
+        errorText.textContent = 'Vui lòng nhập email';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Validate email format - must end with dms.com domain
+    var atSymbol = '@@';
+    var firstAt = email.indexOf(atSymbol);
+    var lastAt = email.lastIndexOf(atSymbol);
+    var hasDot = email.indexOf('.') !== -1;
+    // Check: must have exactly one at symbol and at least one dot
+    if (firstAt === -1 || firstAt !== lastAt || !hasDot) {
+        errorText.textContent = 'Email không hợp lệ';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Check: email must end with dms.com domain
+    var requiredDomain = '@@' + 'dms.com';
+    if (!email.endsWith(requiredDomain)) {
+        errorText.textContent = 'Email phải có đuôi @@dms.com';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Validate password
+    if (!password || password.length < 6) {
+        errorText.textContent = 'Mật khẩu phải có ít nhất 6 ký tự';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Validate confirm password
+    if (password !== confirmPassword) {
+        errorText.textContent = 'Mật khẩu xác nhận không khớp';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Validate full name
+    if (!fullName) {
+        errorText.textContent = 'Vui lòng nhập họ tên';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    // Validate role
+    if (!role) {
+        errorText.textContent = 'Vui lòng chọn vai trò';
+        errorAlert.style.display = 'block';
+        return false;
+    }
+    
+    return true;
 }
 
 function showEditUserModal(button) {

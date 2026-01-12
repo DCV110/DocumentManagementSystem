@@ -1,0 +1,448 @@
+@{
+    ViewData["Title"] = "Lịch sử";
+    Layout = "_SidebarLayout";
+}
+
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    var viewHistory = ViewBag.ViewHistory as List<(AuditLog Log, Document? Document)> ?? new List<(AuditLog, Document?)>();
+    var quizAttempts = ViewBag.QuizAttempts as List<DMS.Models.StudentQuizAttempt> ?? new List<DMS.Models.StudentQuizAttempt>();
+    var favoriteDocuments = ViewBag.FavoriteDocuments as List<DMS.Models.Document> ?? new List<DMS.Models.Document>();
+}
+
+<partial name="_StudentSidebar" />
+
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Lịch sử</h1>
+            <p>Xem lại lịch sử xem file, làm bài và các file đã yêu thích</p>
+        </div>
+        <div class="header-actions">
+            <partial name="_NotificationDropdown" />
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
+        <!-- Tabs -->
+        <div class="history-tabs">
+            <button class="tab-btn active" onclick="switchTab('view-history')">
+                <span class="material-symbols-outlined">visibility</span>
+                <span>Lịch sử xem file</span>
+                <span class="tab-count">@viewHistory.Count</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('quiz-history')">
+                <span class="material-symbols-outlined">quiz</span>
+                <span>Lịch sử làm bài</span>
+                <span class="tab-count">@quizAttempts.Count</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('favorites')">
+                <span class="material-symbols-outlined">favorite</span>
+                <span>File yêu thích</span>
+                <span class="tab-count">@favoriteDocuments.Count</span>
+            </button>
+        </div>
+
+        <!-- Tab Content: View History -->
+        <div id="view-history" class="tab-content active">
+            @if (viewHistory.Any())
+            {
+                <div class="history-list">
+                    @foreach (var (log, doc) in viewHistory)
+                    {
+                        @if (doc != null)
+                        {
+                            <div class="history-item">
+                                <div class="history-icon">
+                                    @if (doc.ContentType.Contains("pdf"))
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #dc2626; font-size: 40px;">picture_as_pdf</span>
+                                    }
+                                    else if (doc.ContentType.Contains("word"))
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #2563eb; font-size: 40px;">description</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #6b7280; font-size: 40px;">insert_drive_file</span>
+                                    }
+                                </div>
+                                <div class="history-content">
+                                    <h4><a href="@Url.Action("Preview", "Document", new { id = doc.Id })">@doc.Title</a></h4>
+                                    <p class="history-meta">
+                                        <span>@doc.User?.FullName</span>
+                                        <span>•</span>
+                                        <span>@doc.Course?.CourseName</span>
+                                        <span>•</span>
+                                        <span>Xem lúc: @log.Timestamp.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(doc.Description))
+                                    {
+                                        <p class="history-description">@doc.Description</p>
+                                    }
+                                </div>
+                                <div class="history-actions">
+                                    <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem lại">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </a>
+                                    <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn" title="Tải xuống">
+                                        <span class="material-symbols-outlined">download</span>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">visibility_off</span>
+                    <h3>Chưa có lịch sử xem file</h3>
+                    <p>Bạn chưa xem file nào. Hãy bắt đầu khám phá thư viện tài liệu!</p>
+                </div>
+            }
+        </div>
+
+        <!-- Tab Content: Quiz History -->
+        <div id="quiz-history" class="tab-content">
+            @if (quizAttempts.Any())
+            {
+                <div class="history-list">
+                    @foreach (var attempt in quizAttempts)
+                    {
+                        @if (attempt.Quiz != null)
+                        {
+                            <div class="history-item">
+                                <div class="history-icon">
+                                    <span class="material-symbols-outlined" style="color: #16a34a; font-size: 40px;">quiz</span>
+                                </div>
+                                <div class="history-content">
+                                    <h4><a href="@Url.Action("ViewResult", "StudentQuiz", new { attemptId = attempt.Id })">@attempt.Quiz.Title</a></h4>
+                                    <p class="history-meta">
+                                        <span>@attempt.Quiz.Course?.CourseName</span>
+                                        <span>•</span>
+                                        <span>Nộp bài: @(attempt.SubmittedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa nộp")</span>
+                                    </p>
+                                    @if (attempt.ScorePercentage.HasValue)
+                                    {
+                                        <div class="quiz-score">
+                                            <span class="score-label">Điểm:</span>
+                                            <span class="score-value @(attempt.ScorePercentage >= 50 ? "pass" : "fail")">
+                                                @(attempt.TotalScore ?? 0)/@(attempt.MaxScore ?? 0) 
+                                                (@attempt.ScorePercentage.Value.ToString("F1")%)
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="quiz-status">Chưa được chấm điểm</p>
+                                    }
+                                </div>
+                                <div class="history-actions">
+                                    <a href="@Url.Action("ViewResult", "StudentQuiz", new { attemptId = attempt.Id })" class="action-btn" title="Xem kết quả">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">quiz</span>
+                    <h3>Chưa có lịch sử làm bài</h3>
+                    <p>Bạn chưa làm bài kiểm tra nào. Hãy kiểm tra các bài kiểm tra có sẵn!</p>
+                </div>
+            }
+        </div>
+
+        <!-- Tab Content: Favorites -->
+        <div id="favorites" class="tab-content">
+            @if (favoriteDocuments.Any())
+            {
+                <div class="history-list">
+                    @foreach (var doc in favoriteDocuments)
+                    {
+                        <div class="history-item">
+                            <div class="history-icon">
+                                @if (doc.ContentType.Contains("pdf"))
+                                {
+                                    <span class="material-symbols-outlined" style="color: #dc2626; font-size: 40px;">picture_as_pdf</span>
+                                }
+                                else if (doc.ContentType.Contains("word"))
+                                {
+                                    <span class="material-symbols-outlined" style="color: #2563eb; font-size: 40px;">description</span>
+                                }
+                                else
+                                {
+                                    <span class="material-symbols-outlined" style="color: #6b7280; font-size: 40px;">insert_drive_file</span>
+                                }
+                            </div>
+                            <div class="history-content">
+                                <h4><a href="@Url.Action("Preview", "Document", new { id = doc.Id })">@doc.Title</a></h4>
+                                <p class="history-meta">
+                                    <span>@doc.User?.FullName</span>
+                                    <span>•</span>
+                                    <span>@doc.Course?.CourseName</span>
+                                    <span>•</span>
+                                    <span>@doc.UploadDate.ToString("dd/MM/yyyy")</span>
+                                </p>
+                                @if (!string.IsNullOrEmpty(doc.Description))
+                                {
+                                    <p class="history-description">@doc.Description</p>
+                                }
+                            </div>
+                            <div class="history-actions">
+                                <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </a>
+                                <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn" title="Tải xuống">
+                                    <span class="material-symbols-outlined">download</span>
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">favorite_border</span>
+                    <h3>Chưa có file yêu thích</h3>
+                    <p>Bạn chưa đánh dấu file nào là yêu thích. Hãy khám phá và đánh dấu các file quan trọng!</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+.history-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.2s;
+    position: relative;
+    bottom: -2px;
+}
+
+.tab-btn:hover {
+    color: #16a34a;
+    background: #f9fafb;
+}
+
+.tab-btn.active {
+    color: #16a34a;
+    border-bottom-color: #16a34a;
+}
+
+.tab-count {
+    background: #e5e7eb;
+    color: #6b7280;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tab-btn.active .tab-count {
+    background: #16a34a;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.history-item {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all 0.2s;
+}
+
+.history-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.history-icon {
+    flex-shrink: 0;
+}
+
+.history-content {
+    flex: 1;
+}
+
+.history-content h4 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.history-content h4 a {
+    color: #111418;
+    text-decoration: none;
+}
+
+.history-content h4 a:hover {
+    color: #16a34a;
+}
+
+.history-meta {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 8px 0;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.history-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.quiz-score {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.score-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.score-value {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+.score-value.pass {
+    color: #16a34a;
+    background: #dcfce7;
+}
+
+.score-value.fail {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.quiz-status {
+    font-size: 14px;
+    color: #6b7280;
+    font-style: italic;
+    margin: 8px 0 0 0;
+}
+
+.history-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #6b7280;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #e5e7eb;
+    color: #111418;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111418;
+    margin: 16px 0 8px 0;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+</style>
+
+<script>
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to clicked button
+    event.target.closest('.tab-btn').classList.add('active');
+}
+</script>
+
+

@@ -73,5 +73,14 @@ namespace DMS.Services.Interfaces
         Task<long> GetStorageUsedAsync(string userId); // Returns bytes used
         Task<bool> CheckStorageLimitAsync(string userId, long additionalBytes); // Check if user can upload additional bytes
         long GetStorageLimit(string userId); // Returns storage limit in bytes (15GB for instructors)
+        
+        // Comments & Ratings
+        Task<List<DocumentComment>> GetDocumentCommentsAsync(int documentId);
+        Task<DocumentComment> AddCommentAsync(int documentId, string userId, string content);
+        Task<bool> UpdateCommentAsync(int commentId, string userId, string content);
+        Task<bool> DeleteCommentAsync(int commentId, string userId);
+        Task<DocumentRating?> GetUserRatingAsync(int documentId, string userId);
+        Task<DocumentRating> AddOrUpdateRatingAsync(int documentId, string userId, int rating);
+        Task<(double AverageRating, int TotalRatings)> GetDocumentRatingStatsAsync(int documentId);
     }
 }

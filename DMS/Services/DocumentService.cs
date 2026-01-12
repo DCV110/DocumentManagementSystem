@@ -891,5 +891,126 @@ namespace DMS.Services
             // Check if adding additionalBytes would exceed limit
             return (used + additionalBytes) <= limit;
         }
+
+        // Comments & Ratings
+        public async Task<List<DocumentComment>> GetDocumentCommentsAsync(int documentId)
+        {
+            return await _context.DocumentComments
+                .Where(c => c.DocumentId == documentId && !c.IsDeleted)
+                .Include(c => c.User)
+                .OrderByDescending(c => c.CreatedDate)
+                .ToListAsync();
+        }
+
+        public async Task<DocumentComment> AddCommentAsync(int documentId, string userId, string content)
+        {
+            var comment = new DocumentComment
+            {
+                DocumentId = documentId,
+                UserId = userId,
+                Content = content,
+                CreatedDate = DateTime.Now
+            };
+
+            _context.DocumentComments.Add(comment);
+            await _context.SaveChangesAsync();
+
+            // Load user for return
+            await _context.Entry(comment)
+                .Reference(c => c.User)
+                .LoadAsync();
+
+            return comment;
+        }
+
+        public async Task<bool> UpdateCommentAsync(int commentId, string userId, string content)
+        {
+            var comment = await _context.DocumentComments
+                .FirstOrDefaultAsync(c => c.Id == commentId && c.UserId == userId && !c.IsDeleted);
+
+            if (comment == null)
+                return false;
+
+            comment.Content = content;
+            comment.UpdatedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> DeleteCommentAsync(int commentId, string userId)
+        {
+            var comment = await _context.DocumentComments
+                .FirstOrDefaultAsync(c => c.Id == commentId && c.UserId == userId && !c.IsDeleted);
+
+            if (comment == null)
+                return false;
+
+            comment.IsDeleted = true;
+            comment.DeletedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<DocumentRating?> GetUserRatingAsync(int documentId, string userId)
+        {
+            return await _context.DocumentRatings
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.DocumentId == documentId && r.UserId == userId);
+        }
+
+        public async Task<DocumentRating> AddOrUpdateRatingAsync(int documentId, string userId, int rating)
+        {
+            var existingRating = await _context.DocumentRatings
+                .FirstOrDefaultAsync(r => r.DocumentId == documentId && r.UserId == userId);
+
+            if (existingRating != null)
+            {
+                existingRating.Rating = rating;
+                existingRating.UpdatedDate = DateTime.Now;
+                await _context.SaveChangesAsync();
+
+                // Load user for return
+                await _context.Entry(existingRating)
+                    .Reference(r => r.User)
+                    .LoadAsync();
+
+                return existingRating;
+            }
+            else
+            {
+                var newRating = new DocumentRating
+                {
+                    DocumentId = documentId,
+                    UserId = userId,
+                    Rating = rating,
+                    CreatedDate = DateTime.Now
+                };
+
+                _context.DocumentRatings.Add(newRating);
+                await _context.SaveChangesAsync();
+
+                // Load user for return
+                await _context.Entry(newRating)
+                    .Reference(r => r.User)
+                    .LoadAsync();
+
+                return newRating;
+            }
+        }
+
+        public async Task<(double AverageRating, int TotalRatings)> GetDocumentRatingStatsAsync(int documentId)
+        {
+            var ratings = await _context.DocumentRatings
+                .Where(r => r.DocumentId == documentId)
+                .ToListAsync();
+
+            if (!ratings.Any())
+                return (0, 0);
+
+            var average = ratings.Average(r => r.Rating);
+            return (Math.Round(average, 1), ratings.Count);
+        }
     }
 }

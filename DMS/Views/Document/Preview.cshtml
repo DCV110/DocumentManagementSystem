@@ -66,104 +66,108 @@ else
 
     <!-- Content Body -->
     <div class="content-body">
-        <div class="preview-container">
-            @if (document?.ContentType.Contains("pdf") == true)
-            {
-                <iframe src="@document.FilePath" class="preview-iframe" frameborder="0"></iframe>
-            }
-            else if (document?.ContentType.Contains("image") == true)
-            {
-                <img src="@document.FilePath" alt="@document.Title" class="preview-image" />
-            }
-            else if (zipContents != null)
-            {
-                <!-- ZIP File Contents Preview -->
-                <div class="zip-preview-container" style="width: 100%; padding: 24px; background: white; border-radius: 12px;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
-                        <span class="material-symbols-outlined" style="font-size: 32px; color: #f97316;">folder_zip</span>
-                        <div>
-                            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #111418;">Nội dung file ZIP</h3>
-                            <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">@zipContents.Count mục (@zipContents.Count(e => !e.IsDirectory)) file, @zipContents.Count(e => e.IsDirectory) thư mục</p>
+        @Html.AntiForgeryToken()
+        
+        <!-- Preview and Sidebar Section (Original Layout) -->
+        <div class="preview-main-section">
+            <div class="preview-container">
+                @if (document?.ContentType.Contains("pdf") == true)
+                {
+                    <iframe src="@document.FilePath" class="preview-iframe" frameborder="0"></iframe>
+                }
+                else if (document?.ContentType.Contains("image") == true)
+                {
+                    <img src="@document.FilePath" alt="@document.Title" class="preview-image" />
+                }
+                else if (zipContents != null)
+                {
+                    <!-- ZIP File Contents Preview -->
+                    <div class="zip-preview-container" style="width: 100%; padding: 24px; background: white; border-radius: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+                            <span class="material-symbols-outlined" style="font-size: 32px; color: #f97316;">folder_zip</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #111418;">Nội dung file ZIP</h3>
+                                <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">@zipContents.Count mục (@zipContents.Count(e => !e.IsDirectory)) file, @zipContents.Count(e => e.IsDirectory) thư mục</p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="zip-contents-list" style="max-height: 600px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead style="background: #f9fafb; position: sticky; top: 0;">
-                                <tr>
-                                    <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Tên</th>
-                                    <th style="padding: 12px 16px; text-align: right; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Kích thước</th>
-                                    <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Ngày sửa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var entry in zipContents.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.FullPath))
-                                {
-                                    <tr style="border-bottom: 1px solid #f3f4f6;">
-                                        <td style="padding: 12px 16px;">
-                                            <div style="display: flex; align-items: center; gap: 8px;">
-                                                @if (entry.IsDirectory)
+                        
+                        <div class="zip-contents-list" style="max-height: 600px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: #f9fafb; position: sticky; top: 0;">
+                                    <tr>
+                                        <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Tên</th>
+                                        <th style="padding: 12px 16px; text-align: right; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Kích thước</th>
+                                        <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Ngày sửa</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in zipContents.OrderBy(e => e.IsDirectory ? 0 : 1).ThenBy(e => e.FullPath))
+                                    {
+                                        <tr style="border-bottom: 1px solid #f3f4f6;">
+                                            <td style="padding: 12px 16px;">
+                                                <div style="display: flex; align-items: center; gap: 8px;">
+                                                    @if (entry.IsDirectory)
+                                                    {
+                                                        <span class="material-symbols-outlined" style="font-size: 20px; color: #fbbf24;">folder</span>
+                                                        <span style="font-weight: 500; color: #111418;">@entry.Name</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="material-symbols-outlined" style="font-size: 20px; color: #6b7280;">description</span>
+                                                        <span style="color: #111418;">@entry.Name</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td style="padding: 12px 16px; text-align: right; color: #6b7280; font-size: 14px;">
+                                                @if (!entry.IsDirectory && entry.Size.HasValue)
                                                 {
-                                                    <span class="material-symbols-outlined" style="font-size: 20px; color: #fbbf24;">folder</span>
-                                                    <span style="font-weight: 500; color: #111418;">@entry.Name</span>
+                                                    @FormatFileSize(entry.Size.Value)
                                                 }
                                                 else
                                                 {
-                                                    <span class="material-symbols-outlined" style="font-size: 20px; color: #6b7280;">description</span>
-                                                    <span style="color: #111418;">@entry.Name</span>
+                                                    <span>-</span>
                                                 }
-                                            </div>
-                                        </td>
-                                        <td style="padding: 12px 16px; text-align: right; color: #6b7280; font-size: 14px;">
-                                            @if (!entry.IsDirectory && entry.Size.HasValue)
-                                            {
-                                                @FormatFileSize(entry.Size.Value)
-                                            }
-                                            else
-                                            {
-                                                <span>-</span>
-                                            }
-                                        </td>
-                                        <td style="padding: 12px 16px; color: #6b7280; font-size: 14px;">
-                                            @if (entry.LastModified.HasValue)
-                                            {
-                                                @entry.LastModified.Value.ToString("dd/MM/yyyy HH:mm")
-                                            }
-                                            else
-                                            {
-                                                <span>-</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                            </td>
+                                            <td style="padding: 12px 16px; color: #6b7280; font-size: 14px;">
+                                                @if (entry.LastModified.HasValue)
+                                                {
+                                                    @entry.LastModified.Value.ToString("dd/MM/yyyy HH:mm")
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="margin-top: 16px; text-align: center;">
+                            <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                                <span class="material-symbols-outlined">download</span>
+                                Tải xuống file ZIP
+                            </a>
+                        </div>
                     </div>
-                    
-                    <div style="margin-top: 16px; text-align: center;">
-                        <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                }
+                else
+                {
+                    <div class="preview-unsupported">
+                        <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">description</span>
+                        <h3>Không thể xem trực tuyến</h3>
+                        <p>File này không hỗ trợ xem trực tuyến. Vui lòng tải xuống để xem.</p>
+                        <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;">
                             <span class="material-symbols-outlined">download</span>
-                            Tải xuống file ZIP
+                            Tải xuống
                         </a>
                     </div>
-                </div>
-            }
-            else
-            {
-                <div class="preview-unsupported">
-                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af; margin-bottom: 16px;">description</span>
-                    <h3>Không thể xem trực tuyến</h3>
-                    <p>File này không hỗ trợ xem trực tuyến. Vui lòng tải xuống để xem.</p>
-                    <a href="@Url.Action("Download", "Document", new { id = document?.Id })" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; margin-top: 16px;">
-                        <span class="material-symbols-outlined">download</span>
-                        Tải xuống
-                    </a>
-                </div>
-            }
-        </div>
+                }
+            </div>
 
-        <!-- Document Info Sidebar -->
-        <div class="preview-sidebar">
+            <!-- Document Info Sidebar -->
+            <div class="preview-sidebar">
             <div class="info-card">
                 <h3>Thông tin tài liệu</h3>
                 <div class="info-item">
@@ -214,14 +218,68 @@ else
                         <span class="material-symbols-outlined">download</span>
                         Tải xuống
                     </a>
-                    <button class="action-btn-full">
-                        <span class="material-symbols-outlined">favorite_border</span>
-                        Đánh dấu yêu thích
-                    </button>
-                    <button class="action-btn-full">
-                        <span class="material-symbols-outlined">share</span>
-                        Chia sẻ
-                    </button>
+                    @if (!isStudent)
+                    {
+                        <button class="action-btn-full" onclick="toggleFavorite(@document?.Id)" id="favoriteBtn">
+                            <span class="material-symbols-outlined" id="favoriteIcon">favorite_border</span>
+                            <span id="favoriteText">Đánh dấu yêu thích</span>
+                        </button>
+                        <button class="action-btn-full" onclick="shareDocument(@document?.Id)">
+                            <span class="material-symbols-outlined">share</span>
+                            Chia sẻ
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="action-btn-full" onclick="toggleFavorite(@document?.Id)" id="favoriteBtn">
+                            <span class="material-symbols-outlined" id="favoriteIcon">favorite_border</span>
+                            <span id="favoriteText">Đánh dấu yêu thích</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Ratings and Comments Section (Below Preview and Sidebar) -->
+        <div class="ratings-comments-section">
+            <!-- Rating Section -->
+            <div class="rating-card">
+                <h3>Đánh giá</h3>
+                <div class="rating-display">
+                    <div class="rating-stars-display" id="ratingDisplay">
+                        <span class="star-wrapper"><span class="material-symbols-outlined">star_border</span></span>
+                        <span class="star-wrapper"><span class="material-symbols-outlined">star_border</span></span>
+                        <span class="star-wrapper"><span class="material-symbols-outlined">star_border</span></span>
+                        <span class="star-wrapper"><span class="material-symbols-outlined">star_border</span></span>
+                        <span class="star-wrapper"><span class="material-symbols-outlined">star_border</span></span>
+                    </div>
+                    <div class="rating-info">
+                        <span class="rating-average" id="ratingAverage">0.0</span>
+                        <span class="rating-count" id="ratingCount">(0 đánh giá)</span>
+                    </div>
+                </div>
+                <div class="rating-input">
+                    <span>Đánh giá của bạn:</span>
+                    <div class="star-rating" id="starRating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-card">
+                <h3>Bình luận</h3>
+                <div class="comment-form">
+                    <textarea id="commentInput" placeholder="Viết bình luận của bạn..." rows="3"></textarea>
+                    <button onclick="addComment(@document?.Id)" class="btn-primary">Gửi bình luận</button>
+                </div>
+                <div class="comments-list" id="commentsList">
+                    <!-- Comments will be loaded here -->
                 </div>
             </div>
         </div>
@@ -299,14 +357,18 @@ else
 
 <style>
 .preview-container {
-    flex: 1;
+    flex: 1 1 60%;
     background: #f9fafb;
     border-radius: 12px;
     overflow: hidden;
     min-height: 600px;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
+    min-width: 500px;
+    position: relative;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .preview-iframe {
@@ -341,8 +403,20 @@ else
 
 .content-body {
     display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.preview-main-section {
+    display: flex;
     gap: 24px;
     align-items: flex-start;
+    width: 100%;
+    flex-wrap: nowrap;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+    order: 1;
 }
 
 .preview-sidebar {
@@ -419,14 +493,641 @@ else
     background: #e5e7eb;
 }
 
+.ratings-comments-section {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 24px;
+    margin-top: 24px;
+    clear: both;
+    flex-shrink: 0;
+    order: 2;
+    box-sizing: border-box;
+}
+
+.rating-card,
+.comments-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.rating-card h3,
+.comments-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111418;
+    margin: 0 0 20px 0;
+}
+
+.rating-display {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.rating-stars-display {
+    display: flex;
+    gap: 4px;
+}
+
+.star-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.rating-stars-display .material-symbols-outlined {
+    font-size: 24px;
+    color: #d1d5db;
+}
+
+.rating-stars-display .material-symbols-outlined.filled {
+    color: #fbbf24;
+}
+
+.rating-stars-display .material-symbols-outlined.half-filled {
+    color: #fbbf24;
+    position: relative;
+}
+
+.rating-stars-display .material-symbols-outlined.half-filled::after {
+    content: 'star_border';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #d1d5db;
+    z-index: -1;
+}
+
+.rating-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.rating-average {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111418;
+}
+
+.rating-count {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.rating-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rating-input > span {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.star-rating {
+    display: flex;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.star {
+    font-size: 28px;
+    color: #d1d5db;
+    transition: color 0.2s;
+    user-select: none;
+}
+
+.star:hover,
+.star.active {
+    color: #fbbf24;
+}
+
+.comment-form {
+    margin-bottom: 24px;
+}
+
+.comment-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.comment-form textarea:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+.comment-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #111418;
+    font-size: 14px;
+}
+
+.comment-date {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.comment-content {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.comment-action-btn {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.comment-action-btn:hover {
+    background: #f3f4f6;
+    color: #111418;
+}
+
+.comment-edit-form {
+    margin-top: 8px;
+}
+
+.comment-edit-form textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+}
+
+.comment-edit-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    background: #15803d;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f3f4f6;
+    color: #111418;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+
 @@media (max-width: 1024px) {
-    .content-body {
+    .preview-main-section {
         flex-direction: column;
     }
 
     .preview-sidebar {
         width: 100%;
     }
+
+    .ratings-comments-section {
+        width: 100% !important;
+        margin-top: 24px !important;
+    }
 }
 </style>
+
+<script>
+// Check favorite status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const documentId = @document?.Id;
+    if (documentId) {
+        checkFavoriteStatus(documentId);
+    }
+});
+
+function checkFavoriteStatus(documentId) {
+    fetch('@Url.Action("IsFavorite", "Document")?documentId=' + documentId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.isFavorite) {
+                updateFavoriteUI(true);
+            }
+        })
+        .catch(err => console.error('Error checking favorite status:', err));
+}
+
+function updateFavoriteUI(isFavorite) {
+    const icon = document.getElementById('favoriteIcon');
+    const text = document.getElementById('favoriteText');
+    
+    if (isFavorite) {
+        icon.textContent = 'favorite';
+        icon.style.color = '#dc2626';
+        text.textContent = 'Đã yêu thích';
+    } else {
+        icon.textContent = 'favorite_border';
+        icon.style.color = '';
+        text.textContent = 'Đánh dấu yêu thích';
+    }
+}
+
+function toggleFavorite(documentId) {
+    const icon = document.getElementById('favoriteIcon');
+    const isCurrentlyFavorite = icon.textContent === 'favorite';
+    
+    // Get anti-forgery token
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    fetch('@Url.Action("ToggleFavorite", "Document")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ documentId: documentId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateFavoriteUI(data.isFavorite);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+        }
+    })
+    .catch(err => {
+        console.error('Error toggling favorite:', err);
+        alert('Có lỗi xảy ra khi cập nhật yêu thích');
+    });
+}
+
+function shareDocument(documentId) {
+    // TODO: Implement share functionality
+    alert('Chức năng chia sẻ đang được phát triển');
+}
+
+// Rating functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const documentId = @document?.Id;
+    if (documentId) {
+        loadRatingStats(documentId);
+        loadUserRating(documentId);
+        loadComments(documentId);
+        
+        // Setup star rating
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                submitRating(documentId, rating);
+            });
+            
+            star.addEventListener('mouseenter', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                highlightStars(rating);
+            });
+        });
+        
+        document.getElementById('starRating').addEventListener('mouseleave', function() {
+            const currentRating = parseInt(document.getElementById('starRating').getAttribute('data-current-rating') || '0');
+            highlightStars(currentRating);
+        });
+    }
+});
+
+function highlightStars(rating) {
+    const stars = document.querySelectorAll('.star');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('active');
+        } else {
+            star.classList.remove('active');
+        }
+    });
+}
+
+function loadRatingStats(documentId) {
+    fetch('@Url.Action("GetRatingStats", "Document")?documentId=' + documentId)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('ratingAverage').textContent = data.averageRating.toFixed(1);
+            document.getElementById('ratingCount').textContent = `(${data.totalRatings} đánh giá)`;
+            
+            // Update star display with proper filling
+            const avgRating = parseFloat(data.averageRating);
+            const fullStars = Math.floor(avgRating);
+            const hasHalfStar = (avgRating % 1) >= 0.5;
+            
+            const starWrappers = document.querySelectorAll('.rating-stars-display .star-wrapper');
+            starWrappers.forEach((wrapper, index) => {
+                let icon = wrapper.querySelector('.material-symbols-outlined');
+                if (!icon) {
+                    icon = document.createElement('span');
+                    icon.className = 'material-symbols-outlined';
+                    wrapper.appendChild(icon);
+                }
+                
+                // Remove any existing half-border overlay
+                const oldHalfBorder = wrapper.querySelector('.half-border-overlay');
+                if (oldHalfBorder) oldHalfBorder.remove();
+                
+                if (index < fullStars) {
+                    // Full star - filled
+                    icon.textContent = 'star';
+                    icon.classList.add('filled');
+                    icon.classList.remove('half-filled');
+                } else if (index === fullStars && hasHalfStar) {
+                    // Half star - use filled star with border overlay
+                    icon.textContent = 'star';
+                    icon.classList.add('filled');
+                    icon.classList.add('half-filled');
+                    
+                    // Add border overlay for the right half
+                    const halfBorder = document.createElement('span');
+                    halfBorder.className = 'material-symbols-outlined half-border-overlay';
+                    halfBorder.textContent = 'star_border';
+                    halfBorder.style.cssText = 'position: absolute; left: 0; top: 0; color: #d1d5db; clip-path: inset(0 0 0 50%); pointer-events: none;';
+                    wrapper.appendChild(halfBorder);
+                } else {
+                    // Empty star - outline
+                    icon.textContent = 'star_border';
+                    icon.classList.remove('filled');
+                    icon.classList.remove('half-filled');
+                }
+            });
+        })
+        .catch(err => console.error('Error loading rating stats:', err));
+}
+
+function loadUserRating(documentId) {
+    fetch('@Url.Action("GetUserRating", "Document")?documentId=' + documentId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.rating > 0) {
+                highlightStars(data.rating);
+                document.getElementById('starRating').setAttribute('data-current-rating', data.rating);
+            }
+        })
+        .catch(err => console.error('Error loading user rating:', err));
+}
+
+function submitRating(documentId, rating) {
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    fetch('@Url.Action("AddOrUpdateRating", "Document")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ documentId: documentId, rating: rating })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            highlightStars(rating);
+            document.getElementById('starRating').setAttribute('data-current-rating', rating);
+            loadRatingStats(documentId);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+        }
+    })
+    .catch(err => {
+        console.error('Error submitting rating:', err);
+        alert('Có lỗi xảy ra khi đánh giá');
+    });
+}
+
+// Comments functionality
+function loadComments(documentId) {
+    fetch('@Url.Action("GetComments", "Document")?documentId=' + documentId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const commentsList = document.getElementById('commentsList');
+                commentsList.innerHTML = '';
+                
+                if (data.comments.length === 0) {
+                    commentsList.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 24px;">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</p>';
+                    return;
+                }
+                
+                data.comments.forEach(comment => {
+                    const commentDiv = document.createElement('div');
+                    commentDiv.className = 'comment-item';
+                    commentDiv.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(comment.userName)}</span>
+                            <span class="comment-date">${comment.createdDate}</span>
+                        </div>
+                        <div class="comment-content" id="comment-content-${comment.id}">${escapeHtml(comment.content)}</div>
+                        ${comment.canEdit ? `
+                            <div class="comment-actions">
+                                <button class="comment-action-btn" onclick="editComment(${comment.id}, '${escapeHtml(comment.content)}')">Sửa</button>
+                                <button class="comment-action-btn" onclick="deleteComment(${comment.id})">Xóa</button>
+                            </div>
+                        ` : ''}
+                    `;
+                    commentsList.appendChild(commentDiv);
+                });
+            }
+        })
+        .catch(err => console.error('Error loading comments:', err));
+}
+
+function addComment(documentId) {
+    const content = document.getElementById('commentInput').value.trim();
+    if (!content) {
+        alert('Vui lòng nhập nội dung bình luận');
+        return;
+    }
+    
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    fetch('@Url.Action("AddComment", "Document")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ documentId: documentId, content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('commentInput').value = '';
+            loadComments(documentId);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+        }
+    })
+    .catch(err => {
+        console.error('Error adding comment:', err);
+        alert('Có lỗi xảy ra khi thêm bình luận');
+    });
+}
+
+function editComment(commentId, currentContent) {
+    const contentDiv = document.getElementById(`comment-content-${commentId}`);
+    const commentItem = contentDiv.closest('.comment-item');
+    
+    const editForm = document.createElement('div');
+    editForm.className = 'comment-edit-form';
+    editForm.innerHTML = `
+        <textarea id="edit-comment-${commentId}" rows="3">${escapeHtml(currentContent)}</textarea>
+        <div class="comment-edit-actions">
+            <button class="btn-primary" onclick="saveComment(${commentId})">Lưu</button>
+            <button class="btn-secondary" onclick="cancelEdit(${commentId})">Hủy</button>
+        </div>
+    `;
+    
+    contentDiv.style.display = 'none';
+    commentItem.appendChild(editForm);
+}
+
+function saveComment(commentId) {
+    const content = document.getElementById(`edit-comment-${commentId}`).value.trim();
+    if (!content) {
+        alert('Nội dung bình luận không được để trống');
+        return;
+    }
+    
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    fetch('@Url.Action("UpdateComment", "Document")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ commentId: commentId, content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const documentId = @document?.Id;
+            loadComments(documentId);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+        }
+    })
+    .catch(err => {
+        console.error('Error updating comment:', err);
+        alert('Có lỗi xảy ra khi cập nhật bình luận');
+    });
+}
+
+function cancelEdit(commentId) {
+    const documentId = @document?.Id;
+    loadComments(documentId);
+}
+
+function deleteComment(commentId) {
+    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+        return;
+    }
+    
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    
+    fetch('@Url.Action("DeleteComment", "Document")', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': token || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ commentId: commentId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const documentId = @document?.Id;
+            loadComments(documentId);
+        } else {
+            alert(data.message || 'Có lỗi xảy ra');
+        }
+    })
+    .catch(err => {
+        console.error('Error deleting comment:', err);
+        alert('Có lỗi xảy ra khi xóa bình luận');
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
 

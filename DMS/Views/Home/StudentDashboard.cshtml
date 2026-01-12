@@ -1,76 +1,27 @@
 @{
     ViewData["Title"] = "Dashboard Sinh viên";
-    Layout = "_DashboardLayout";
+    Layout = "_SidebarLayout";
 }
 
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<ApplicationUser> UserManager
 
-@{
-    var currentUser = await UserManager.GetUserAsync(User);
-}
+<partial name="_StudentSidebar" />
 
-<div class="dashboard-header">
-    <div class="header-left">
-        <div class="logo-icon">
-            <span class="material-symbols-outlined icon-fill">school</span>
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Dashboard Sinh viên</h1>
+            <p>Chào mừng trở lại! Quản lý và truy cập tài liệu học tập của bạn.</p>
         </div>
-        <h2 class="header-title">Hệ thống Học tập</h2>
-    </div>
-    <div class="header-nav">
-        <a href="@Url.Action("StudentDashboard", "Home")" class="nav-link active">Tổng quan</a>
-        <a href="@Url.Action("Library", "Document")" class="nav-link">Thư viện tài liệu</a>
-        <a href="@Url.Action("Search", "Document")" class="nav-link">Tìm kiếm</a>
-        <a href="@Url.Action("MyCourses", "Home")" class="nav-link">Khóa học của tôi</a>
-        <a href="@Url.Action("Index", "StudentQuiz")" class="nav-link">Bài kiểm tra</a>
-        <a href="@Url.Action("Schedule", "Home")" class="nav-link">Lịch biểu</a>
-    </div>
-    <div class="header-actions">
-        <partial name="_NotificationDropdown" />
-        <div class="user-menu">
-            <button class="avatar-btn" id="avatarBtn" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></button>
-            <div class="user-dropdown" id="userDropdown">
-                <div class="dropdown-header">
-                    <div class="dropdown-avatar" style="background-image: url('https://ui-avatars.com/api/?name=@UserManager.GetUserName(User)&background=0959aa&color=fff')"></div>
-                    <div class="dropdown-user-info">
-                        <div class="dropdown-name">@(currentUser?.FullName ?? UserManager.GetUserName(User))</div>
-                        <div class="dropdown-role">Sinh viên</div>
-                        @if (!string.IsNullOrEmpty(currentUser?.StudentCode))
-                        {
-                            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">MSSV: @currentUser.StudentCode</div>
-                        }
-                    </div>
-                </div>
-                <div class="dropdown-divider"></div>
-                <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form-inline">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="dropdown-item logout-item">
-                        <span class="material-symbols-outlined">logout</span>
-                        <span>Đăng xuất</span>
-                    </button>
-                </form>
-            </div>
+        <div class="header-actions">
+            <partial name="_NotificationDropdown" />
         </div>
     </div>
-</div>
 
-<main class="dashboard-main">
-    <div class="dashboard-title-section">
-        <div>
-            <h1 class="dashboard-title">Dashboard Sinh viên</h1>
-            <p class="dashboard-subtitle">Chào mừng trở lại! Quản lý và truy cập tài liệu học tập của bạn.</p>
-        </div>
-        <div class="action-buttons">
-            <a href="@Url.Action("Library", "Document")" class="btn btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-outlined">folder</span>
-                Thư viện tài liệu
-            </a>
-            <a href="@Url.Action("Search", "Document")" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-outlined">search</span>
-                Tìm kiếm
-            </a>
-        </div>
-    </div>
+    <!-- Content Body -->
+    <div class="content-body">
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
@@ -305,25 +256,5 @@
             </div>
         }
     </div>
-</main>
-
-<script>
-    // User dropdown toggle
-    const avatarBtn = document.getElementById('avatarBtn');
-    const userDropdown = document.getElementById('userDropdown');
-
-    if (avatarBtn && userDropdown) {
-        avatarBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userDropdown.classList.toggle('show');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!userDropdown.contains(e.target) && !avatarBtn.contains(e.target)) {
-                userDropdown.classList.remove('show');
-            }
-        });
-    }
-</script>
+</div>
 

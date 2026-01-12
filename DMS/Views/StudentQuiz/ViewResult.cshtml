@@ -1,6 +1,6 @@
 @{
     ViewData["Title"] = "Kết quả bài kiểm tra";
-    Layout = "_DashboardLayout";
+    Layout = "_SidebarLayout";
 }
 
 @using Microsoft.AspNetCore.Identity
@@ -12,19 +12,22 @@
     var answerDetails = ViewBag.AnswerDetails as List<DMS.ViewModels.AnswerDetailVM>;
 }
 
-<div class="dashboard-header">
-    <div class="header-left">
-        <div class="logo-icon">
-            <span class="material-symbols-outlined icon-fill">school</span>
-        </div>
-        <h2 class="header-title">Academic DMS</h2>
-    </div>
-    <div class="header-actions">
-        <partial name="_NotificationDropdown" />
-    </div>
-</div>
+<partial name="_StudentSidebar" />
 
-<main class="dashboard-main">
+<div class="main-content">
+    <!-- Header -->
+    <div class="content-header">
+        <div class="header-title-section">
+            <h1>Kết quả bài kiểm tra</h1>
+            <p>@quiz?.Title</p>
+        </div>
+        <div class="header-actions">
+            <partial name="_NotificationDropdown" />
+        </div>
+    </div>
+
+    <!-- Content Body -->
+    <div class="content-body">
     <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; margin-bottom: 24px;">
         <h1 style="font-size: 24px; font-weight: 700; color: #111418; margin: 0 0 8px 0;">@quiz?.Title</h1>
         @if (!string.IsNullOrEmpty(quiz?.Description))
@@ -105,7 +108,9 @@
             Quay lại danh sách
         </a>
     </div>
-</main>
+    </div>
+</div>
+</div>
 
 <style>
     .btn {
