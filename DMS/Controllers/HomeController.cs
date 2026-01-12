@@ -1034,6 +1034,27 @@ namespace DMS.Controllers
                 }
             }
 
+            // Lịch sử tải về (từ AuditLog)
+            var downloadHistoryLogs = await _context.AuditLogs
+                .Where(a => a.UserId == user.Id && 
+                           a.Action == "Download" && 
+                           a.EntityType == "Document" &&
+                           a.EntityId != null)
+                .OrderByDescending(a => a.Timestamp)
+                .Take(50)
+                .ToListAsync();
+
+            // Lấy thông tin document cho mỗi log entry
+            var downloadHistoryWithDocs = new List<(AuditLog Log, Document? Document)>();
+            foreach (var log in downloadHistoryLogs)
+            {
+                var doc = await _documentService.GetDocumentWithDetailsAsync(log.EntityId ?? 0);
+                if (doc != null && !doc.IsDeleted)
+                {
+                    downloadHistoryWithDocs.Add((log, doc));
+                }
+            }
+
             // Lịch sử làm bài (Quiz Attempts)
             var quizAttempts = await _quizService.GetAttemptsByStudentAsync(user.Id);
 
@@ -1051,6 +1072,7 @@ namespace DMS.Controllers
 
             ViewBag.User = user;
             ViewBag.ViewHistory = viewHistoryWithDocs;
+            ViewBag.DownloadHistory = downloadHistoryWithDocs;
             ViewBag.QuizAttempts = quizAttempts;
             ViewBag.FavoriteDocuments = favoriteDocuments;
 

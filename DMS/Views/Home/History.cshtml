@@ -8,6 +8,7 @@
 
 @{
     var viewHistory = ViewBag.ViewHistory as List<(AuditLog Log, Document? Document)> ?? new List<(AuditLog, Document?)>();
+    var downloadHistory = ViewBag.DownloadHistory as List<(AuditLog Log, Document? Document)> ?? new List<(AuditLog, Document?)>();
     var quizAttempts = ViewBag.QuizAttempts as List<DMS.Models.StudentQuizAttempt> ?? new List<DMS.Models.StudentQuizAttempt>();
     var favoriteDocuments = ViewBag.FavoriteDocuments as List<DMS.Models.Document> ?? new List<DMS.Models.Document>();
 }
@@ -19,7 +20,7 @@
     <div class="content-header">
         <div class="header-title-section">
             <h1>Lịch sử</h1>
-            <p>Xem lại lịch sử xem file, làm bài và các file đã yêu thích</p>
+            <p>Xem lại lịch sử xem file, tải về, làm bài và các file đã yêu thích</p>
         </div>
         <div class="header-actions">
             <partial name="_NotificationDropdown" />
@@ -39,6 +40,11 @@
                 <span class="material-symbols-outlined">quiz</span>
                 <span>Lịch sử làm bài</span>
                 <span class="tab-count">@quizAttempts.Count</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('download-history')">
+                <span class="material-symbols-outlined">download</span>
+                <span>Lịch sử tải về</span>
+                <span class="tab-count">@downloadHistory.Count</span>
             </button>
             <button class="tab-btn" onclick="switchTab('favorites')">
                 <span class="material-symbols-outlined">favorite</span>
@@ -159,6 +165,67 @@
                     <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">quiz</span>
                     <h3>Chưa có lịch sử làm bài</h3>
                     <p>Bạn chưa làm bài kiểm tra nào. Hãy kiểm tra các bài kiểm tra có sẵn!</p>
+                </div>
+            }
+        </div>
+
+        <!-- Tab Content: Download History -->
+        <div id="download-history" class="tab-content">
+            @if (downloadHistory.Any())
+            {
+                <div class="history-list">
+                    @foreach (var (log, doc) in downloadHistory)
+                    {
+                        @if (doc != null)
+                        {
+                            <div class="history-item">
+                                <div class="history-icon">
+                                    @if (doc.ContentType.Contains("pdf"))
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #dc2626; font-size: 40px;">picture_as_pdf</span>
+                                    }
+                                    else if (doc.ContentType.Contains("word"))
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #2563eb; font-size: 40px;">description</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="material-symbols-outlined" style="color: #6b7280; font-size: 40px;">insert_drive_file</span>
+                                    }
+                                </div>
+                                <div class="history-content">
+                                    <h4><a href="@Url.Action("Preview", "Document", new { id = doc.Id })">@doc.Title</a></h4>
+                                    <p class="history-meta">
+                                        <span>@doc.User?.FullName</span>
+                                        <span>•</span>
+                                        <span>@doc.Course?.CourseName</span>
+                                        <span>•</span>
+                                        <span>Tải về lúc: @log.Timestamp.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(doc.Description))
+                                    {
+                                        <p class="history-description">@doc.Description</p>
+                                    }
+                                </div>
+                                <div class="history-actions">
+                                    <a href="@Url.Action("Preview", "Document", new { id = doc.Id })" class="action-btn" title="Xem">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </a>
+                                    <a href="@Url.Action("Download", "Document", new { id = doc.Id })" class="action-btn" title="Tải xuống lại">
+                                        <span class="material-symbols-outlined">download</span>
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size: 64px; color: #9ca3af;">download</span>
+                    <h3>Chưa có lịch sử tải về</h3>
+                    <p>Bạn chưa tải về file nào. Hãy khám phá thư viện tài liệu và tải về các file bạn cần!</p>
                 </div>
             }
         </div>
