@@ -81,8 +81,12 @@
                 <p class="kpi-label">Trạng thái hệ thống</p>
                 <span class="material-symbols-outlined kpi-icon green">dns</span>
             </div>
-            <p class="kpi-value">99.9%</p>
-            <p class="kpi-description">Lưu trữ sử dụng: @(Math.Round((double)(ViewBag.StoragePercentage ?? 0), 1))% (@(Math.Round((double)(ViewBag.TotalStorageGB ?? 0), 2))GB)</p>
+            @{
+                var storageUsedPercent = (double)(ViewBag.StoragePercentage ?? 0);
+                var totalStorageGB = (double)(ViewBag.TotalStorageGB ?? 0);
+            }
+            <p class="kpi-value">@(Math.Round(storageUsedPercent, 1))%</p>
+            <p class="kpi-description">Lưu trữ đã dùng: @(Math.Round(storageUsedPercent, 1))% (@(Math.Round(totalStorageGB, 2))GB)</p>
         </div>
     </div>
 

@@ -15,13 +15,13 @@
     <partial name="_StudentSidebar" />
 }
 else if (User.IsInRole("Admin"))
-{
-    <partial name="_AdminSidebar" />
-}
-else if (User.IsInRole("Instructor"))
-{
-    <partial name="_InstructorSidebar" />
-}
+    {
+        <partial name="_AdminSidebar" />
+    }
+    else if (User.IsInRole("Instructor"))
+    {
+        <partial name="_InstructorSidebar" />
+    }
 
 <div class="main-content">
     <!-- Header -->
@@ -262,7 +262,7 @@ else if (User.IsInRole("Instructor"))
         </div>
     }
     </div>
-</div>
+    </div>
 
 <style>
 /* Search Box in Filters */
